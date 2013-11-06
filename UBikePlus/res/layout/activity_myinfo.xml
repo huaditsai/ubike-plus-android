@@ -1,50 +1,144 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:layout_gravity="center"
-    android:layout_centerInParent="true" >
+    android:layout_centerInParent="true"
+    android:background="#dee1e8"
+    android:gravity="center"
+    android:orientation="vertical" 
+    android:padding="50dp">
 
     <ImageView
-        android:id="@+id/imageView1"
+        android:id="@+id/img_myPic"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:scaleType="center"
+        android:layout_weight="1"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_launcher"
-        android:layout_weight="1" />
+        android:layout_marginBottom="20dp"
+        android:background="#ffffff"/>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:layout_marginBottom="100dip"
+        android:background="#ffffff"
+        android:gravity="top"
         android:orientation="vertical" >
-        
+
         <TextView
-            android:id="@+id/textView1"
+            android:id="@+id/txt_myName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView1" />
+            android:gravity="center"
+            android:text="Name"
+            android:textSize="50sp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal" >
-
-            <TextView
-            android:id="@+id/textView2"
+        <TableLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView2" />
-            
-            <TextView
-            android:id="@+id/textView3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TextView3" />
-        </LinearLayout>
+            android:gravity="center"
+            android:stretchColumns="2" >
 
-        
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp" >
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="身高"
+                    android:textSize="20sp"
+                    android:layout_marginRight="50dp" />
+
+                <TextView
+                    android:id="@+id/txt_myHeight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TextView"
+                    android:textSize="20sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="體重" 
+                    android:textSize="20sp"
+                    android:layout_marginRight="50dp"/>
+
+                <TextView
+                    android:id="@+id/txt_myWeight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TextView"
+                    android:textSize="20sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="總里程"
+                    android:textSize="20sp"
+                    android:layout_marginRight="50dp" />
+
+                <TextView
+                    android:id="@+id/txt_myTotalDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TextView"
+                    android:textSize="20sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="平均速度"
+                    android:textSize="20sp"
+                    android:layout_marginRight="50dp" />
+
+                <TextView
+                    android:id="@+id/txt_myAvgSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TextView"
+                    android:textSize="20sp" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="本月里程"
+                    android:textSize="20sp"
+                    android:layout_marginRight="50dp" />
+
+                <TextView
+                    android:id="@+id/txt_myMonthDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TextView"
+                    android:textSize="20sp" />
+            </TableRow>
+        </TableLayout>
     </LinearLayout>
 
 </LinearLayout>

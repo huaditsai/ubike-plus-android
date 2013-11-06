@@ -1,7 +1,10 @@
 package huadi.ubikeplus;
 
+import com.google.android.gms.maps.model.Marker;
+
 public class BikeList
 {
+	Marker marker;
 	int img_pin;
 	String txt_title;
 	String txt_area;

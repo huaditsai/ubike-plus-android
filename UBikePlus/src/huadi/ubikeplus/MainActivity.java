@@ -262,53 +262,58 @@ public class MainActivity extends Activity
 					public void onInfoWindowClick(final Marker marker)
 					{
 						directionPoint = marker.getPosition().latitude + "," + marker.getPosition().longitude;
-						List<String> distanceMatrix = new ArrayList<String>();
-						int cost = 0; //預計花費
-						try
-						{
-							distanceMatrix = new GoogleDistanceMatrixTask().execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint).get();
-							int timeMin = Integer.parseInt(distanceMatrix.get(3)) / 60; //預計時間(走路)
-							if (timeMin < 30)
-								cost = 0;
-							else if (timeMin >= 30 && timeMin < 240)
-							{
-								cost = timeMin / 30 * 10;
-							}
-							else if (timeMin >= 240 && timeMin < 480)
-							{
-								cost = timeMin / 30 * 20;
-							}
-							else if (timeMin >= 480)
-							{
-								cost = timeMin / 30 * 40;
-							}
-						}
-						catch (Exception e)
-						{
-							e.printStackTrace();
-						}
-
-						new AlertDialog.Builder(MainActivity.this).setTitle("路徑規劃 , 將此點設為路徑終點?").setMessage("與此地距離 " + distanceMatrix.get(0) + "\n走路花費時間 約 " + distanceMatrix.get(1) + "\nYouBike會員花費 約 " + cost + " 元").setPositiveButton("確定", new DialogInterface.OnClickListener()
-						{
-							@Override
-							public void onClick(DialogInterface dialog, int which)
-							{
-								new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
-								isDrection = true;
-							}
-						}).setNegativeButton("取消", new DialogInterface.OnClickListener()
-						{
-							@Override
-							public void onClick(DialogInterface dialog, int which)
-							{
-							}
-						}).show();
+						ClickMarker(directionPoint);
 					}
 				});
 
 			}
 
 		}
+	}
+	
+	public void ClickMarker(final String directionPoint)
+	{		
+		List<String> distanceMatrix = new ArrayList<String>();
+		int cost = 0; //預計花費
+		try
+		{
+			distanceMatrix = new GoogleDistanceMatrixTask().execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint).get();
+			int timeMin = Integer.parseInt(distanceMatrix.get(3)) / 60; //預計時間(走路)
+			if (timeMin < 30)
+				cost = 0;
+			else if (timeMin >= 30 && timeMin < 240)
+			{
+				cost = timeMin / 30 * 10;
+			}
+			else if (timeMin >= 240 && timeMin < 480)
+			{
+				cost = timeMin / 30 * 20;
+			}
+			else if (timeMin >= 480)
+			{
+				cost = timeMin / 30 * 40;
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+
+		new AlertDialog.Builder(MainActivity.this).setTitle("路徑規劃 , 將此點設為路徑終點?").setMessage("與此地距離 " + distanceMatrix.get(0) + "\n走路花費時間 約 " + distanceMatrix.get(1) + "\nYouBike會員花費 約 " + cost + " 元").setPositiveButton("確定", new DialogInterface.OnClickListener()
+		{
+			@Override
+			public void onClick(DialogInterface dialog, int which)
+			{
+				new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
+				isDrection = true;
+			}
+		}).setNegativeButton("取消", new DialogInterface.OnClickListener()
+		{
+			@Override
+			public void onClick(DialogInterface dialog, int which)
+			{
+			}
+		}).show();
 	}
 
 	public void InitMapItems(File file, boolean isGetMarker)
@@ -527,16 +532,10 @@ public class MainActivity extends Activity
 		myListView.setOnItemClickListener(new OnItemClickListener()
 		{
 			@Override
-			public void onItemClick(AdapterView<?> a, View v, int position, long id)
+			public void onItemClick(AdapterView<?> a, View v, int which, long id)
 			{
-				switch (position)
-				{
-					case 0:
-						break;
-
-					default:
-						break;
-				}
+				String directionPoint = bikeLists.get(which).marker.getPosition().latitude + "," + bikeLists.get(which).marker.getPosition().longitude;
+				ClickMarker(directionPoint);
 			}
 		});
 
@@ -573,6 +572,7 @@ public class MainActivity extends Activity
 			}
 			p = new BikeList();
 
+			p.marker = markers.get(i);
 			p.img_pin = R.drawable.bike_pin_green;
 			p.txt_title = markers.get(i).getTitle();
 			p.txt_area = sareas.get(i);
@@ -726,11 +726,11 @@ public class MainActivity extends Activity
 
 						break;
 					case 4: //社群分享
-						
+
 						break;
 					case 5: //設定
-//						Intent intent1 = new Intent(MainActivity.this, SettingActivity.class);
-//						startActivity(intent1);
+						Intent intent1 = new Intent(MainActivity.this, SettingActivity.class);
+						startActivity(intent1);
 						break;
 					default:
 						break;
