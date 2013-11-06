@@ -338,7 +338,7 @@ public class MainActivity extends Activity
 				{
 					if (!line.split(",")[0].equals("0000"))
 					{
-						Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_green)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+						Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
 
 						allMarkers.add(marker); //新增到所有點中						
 					}
@@ -364,7 +364,7 @@ public class MainActivity extends Activity
 								//Log.e("br.readLine()", line);
 								if (!line.split(",")[0].equals("0000"))
 								{
-									Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_green)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+									Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
 
 									allMarkers.add(marker); //新增到所有點中
 								}
@@ -396,9 +396,15 @@ public class MainActivity extends Activity
 
 	public void SetCompassBtn() //旋轉到地圖時才出現
 	{
+		DisplayMetrics dm = new DisplayMetrics();
+        this.getWindowManager().getDefaultDisplay().getMetrics(dm);
+        
+        int vWidth = dm.widthPixels;
+        int vHeight = dm.heightPixels;
+		
 		compass = (ImageButton) findViewById(R.id.btn_compass);
-		compass.setVisibility(ImageButton.INVISIBLE);
-
+		compass.setVisibility(ImageButton.GONE);
+		
 		map.setOnCameraChangeListener(new OnCameraChangeListener()
 		{
 			@Override
@@ -415,7 +421,7 @@ public class MainActivity extends Activity
 					currentDegree = -cameraPosition.bearing;
 				}
 				else
-					compass.setVisibility(ImageButton.INVISIBLE);
+					compass.setVisibility(ImageButton.GONE);
 			}
 		});
 		compass.setOnClickListener(new OnClickListener() //轉正地圖
@@ -442,7 +448,7 @@ public class MainActivity extends Activity
 				switch (event.getAction())
 				{
 					case MotionEvent.ACTION_DOWN:
-						myLocationButton.setImageResource(R.drawable.loction_b);
+						myLocationButton.setImageResource(R.drawable.map_location_press);
 						break;
 					case MotionEvent.ACTION_UP:
 						if (locationClient.getLastLocation() != null && locationClient.isConnected())
@@ -472,7 +478,7 @@ public class MainActivity extends Activity
 								}).show();
 							}
 						}
-						myLocationButton.setImageResource(R.drawable.loction_g);
+						myLocationButton.setImageResource(R.drawable.map_location);
 						break;
 				}
 				return false;
@@ -573,17 +579,17 @@ public class MainActivity extends Activity
 			p = new BikeList();
 
 			p.marker = markers.get(i);
-			p.img_pin = R.drawable.bike_pin_green;
+			p.img_pin = R.drawable.map_havebike;
 			p.txt_title = markers.get(i).getTitle();
 			p.txt_area = sareas.get(i);
 
 			p.txt_bike = info.get(i).split(",")[0];
 			if (p.txt_bike.equals("0"))
-				p.img_pin = R.drawable.bike_pin_orange;
+				p.img_pin = R.drawable.map_nobike;
 
 			p.txt_stop = info.get(i).split(",")[1];
 			if (p.txt_stop.equals("0"))
-				p.img_pin = R.drawable.bike_pin_red;
+				p.img_pin = R.drawable.map_nopark;
 
 			p.txt_distance = distanceMatrix.get(0);
 			p.distanceValue = Float.parseFloat(distanceMatrix.get(2));

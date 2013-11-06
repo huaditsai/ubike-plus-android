@@ -90,17 +90,17 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 				String bikeHeadString = sarea + "\r\n可租車輛 : ";
 				String stopHeadString = sarea + "\r\n可租車輛 : " + snippet.split(",")[0] + "\r\n可停空位 : ";
 				
-				marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_green));
+				marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike));
 				
 				if (snippet.split(",")[0].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), bikeHeadString.length(), bikeHeadString.length() + snippet.split(",")[0].length(), 0);
-					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_orange));
+					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nobike));
 				}
 				else if (snippet.split(",")[1].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), stopHeadString.length(), snippetText.length(), 0);
-					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_red));
+					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nopark));
 				}
 				else if(snippet.split(",")[1].equals("null") && snippet.split(",")[1].equals("null"))
 					marker.setVisible(false);
