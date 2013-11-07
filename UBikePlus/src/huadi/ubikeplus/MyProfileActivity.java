@@ -12,6 +12,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff.Mode;
@@ -22,6 +23,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.NavUtils;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -31,7 +33,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MyInfoActivity extends Activity
+public class MyProfileActivity extends Activity
 {
 	SharedPreferences sharedPreferences;
 	ImageView img_myPic;
@@ -47,7 +49,7 @@ public class MyInfoActivity extends Activity
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_myinfo);
+		setContentView(R.layout.activity_myprofile);
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setBackgroundDrawable(getResources().getDrawable(R.drawable.actionbar_bg));
 
@@ -59,11 +61,11 @@ public class MyInfoActivity extends Activity
 			@Override
 			public void onClick(View v)
 			{
-				AlertDialog.Builder builderSingle = new AlertDialog.Builder(MyInfoActivity.this);
+				AlertDialog.Builder builderSingle = new AlertDialog.Builder(MyProfileActivity.this);
 				//builderSingle.setIcon(R.drawable.ic_launcher);
 				//builderSingle.setTitle("Select One Name:-");
 
-				final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(MyInfoActivity.this, android.R.layout.select_dialog_item);
+				final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(MyProfileActivity.this, android.R.layout.select_dialog_item);
 				//arrayAdapter.add("拍照");
 				arrayAdapter.add("從檔案選擇圖片");
 				arrayAdapter.add("由Facebook匯入");
@@ -127,10 +129,10 @@ public class MyInfoActivity extends Activity
 			@Override
 			public void onClick(View v)
 			{
-				final EditText inputEditText = new EditText(MyInfoActivity.this);
+				final EditText inputEditText = new EditText(MyProfileActivity.this);
 				inputEditText.setSingleLine();
 				
-				new AlertDialog.Builder(MyInfoActivity.this)
+				new AlertDialog.Builder(MyProfileActivity.this)
 				.setTitle("輸入名稱")
 				.setView(inputEditText)
 				.setPositiveButton("Ok", new DialogInterface.OnClickListener()

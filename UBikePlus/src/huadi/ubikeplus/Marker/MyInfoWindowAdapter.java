@@ -5,9 +5,7 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
-import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
@@ -85,8 +83,6 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 			}
 
 			TextView info_snippet = (TextView) v.findViewById(R.id.info_snippet);
-			ImageView myinfo_parking = (ImageView) v.findViewById(R.id.myinfo_parking);
-			ImageView myinfo_bike = (ImageView) v.findViewById(R.id.myinfo_bike);
 			TextView myinfo_parking_text = (TextView) v.findViewById(R.id.myinfo_parking_text);
 			TextView myinfo_bike_text = (TextView) v.findViewById(R.id.myinfo_bike_text);
 
@@ -115,8 +111,8 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 
 //				info_snippet.setText(snippetText);
 				info_snippet.setText(sarea);
-				myinfo_parking_text.setText(snippet.split(",")[1]);
-				myinfo_bike_text.setText(snippet.split(",")[0]);
+				myinfo_parking_text.setText(snippet.split(",")[0]);
+				myinfo_bike_text.setText(snippet.split(",")[1]);
 			}
 			else
 			{

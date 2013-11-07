@@ -27,70 +27,47 @@
             android:contentDescription="@string/app_name"
             android:scaleType="fitCenter"
             android:src="@drawable/map_location" />
-        
-        
-            
-        <LinearLayout 
-            android:layout_width="match_parent" 
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="right"
-            android:orientation="vertical">
-            
-	        <LinearLayout 
-	            android:layout_width="match_parent" 
-	            android:layout_height="wrap_content" 
-	            android:background="@drawable/actionbar_bg"
-	            android:padding="10dp" 
-	            android:orientation="horizontal">
-	
-	            <ImageButton 
-	                android:id="@+id/drawerHomeButton" 
-	                android:layout_width="wrap_content" 
-	                android:layout_height="wrap_content" 
-	                android:background="@android:color/transparent" 
-	                android:scaleType="fitCenter" 
-	                android:src="@drawable/slide_menu_00" />
-	
-	            <SearchView 
-	                android:id="@+id/searchView1" 
-	                android:layout_width="wrap_content" 
-	                android:layout_height="wrap_content"
-	                android:paddingLeft="10dp"
-	                android:background="@android:drawable/editbox_dropdown_light_frame" 
-	                android:iconifiedByDefault="false" 
-	                android:queryHint="@string/search_title" />
-	                            
-	        </LinearLayout>
-	            
-	            <ImageButton 
-	                android:id="@+id/btn_compass" 
-	                android:layout_width="wrap_content" 
-	                android:layout_height="wrap_content" 
-	                android:padding="10dp"
-	                android:background="@android:color/transparent" 
-	                android:contentDescription="@string/app_name"
-	                android:src="@drawable/map_compass" />
-	            
-            </LinearLayout>
-        
-        <LinearLayout
-            android:id="@+id/layout_exercise"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
-            android:background="#CF000000"
             android:orientation="vertical" >
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/actionbar_bg"
+                android:orientation="horizontal"
+                android:padding="10dp" >
+
+                <ImageButton
+                    android:id="@+id/drawerHomeButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/slide_menu_00" />
+
+                <SearchView
+                    android:id="@+id/searchView1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@android:drawable/editbox_dropdown_light_frame"
+                    android:iconifiedByDefault="false"
+                    android:paddingLeft="10dp"
+                    android:queryHint="@string/search_title" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btn_compass"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/app_name"
+                android:padding="10dp"
+                android:src="@drawable/map_compass" />
         </LinearLayout>
-        
-
-        <ListView
-            android:id="@+id/searchList"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="60dp"
-            android:visibility="invisible" />
-
 
     </RelativeLayout>
 
@@ -106,6 +83,5 @@
         android:divider="@android:color/transparent"
         android:dividerHeight="5dp"
         android:paddingBottom="20dp" />
-
 
 </android.support.v4.widget.DrawerLayout>

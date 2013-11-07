@@ -2,7 +2,7 @@ package huadi.ubikeplus;
 
 import huadi.ubikeplus.Drawer.DrawerItemAdapter;
 import huadi.ubikeplus.Drawer.DrawerListMoedel;
-import huadi.ubikeplus.Marker.MarkerClicked;
+import huadi.ubikeplus.Marker.InfoWindowClicked;
 import huadi.ubikeplus.Marker.MyInfoWindowAdapter;
 import huadi.ubikeplus.Marker.RealTimeBikeTask;
 import huadi.ubikeplus.Route.GeocoderTask;
@@ -11,14 +11,13 @@ import huadi.ubikeplus.Route.GoogleDirectionTask;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -28,28 +27,29 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.provider.Contacts;
 import android.provider.Settings;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.SearchView.OnQueryTextListener;
-import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
@@ -115,24 +115,15 @@ public class MainActivity extends Activity
 	private Handler udateHandler = new Handler();
 	private Runnable udateRunnable; //定時更新用
 
-	private LinearLayout layout_exercise;
-	private static TextView txt_timer, txt_speed, txt_caloric, txt_distance;
-	private Button btn_pause;
-	private int timerSec = 0; //計時秒數
-	private Handler timeHandler = new Handler();
+	private boolean isStartExe = false;
+
+	ExerciseTimerView exerciseTimerView; //計時視窗
 	private float myTracesDistance = 0f;
 	private Polyline myTracesPolyline; //走過的痕跡
 	private List<LatLng> myTracesPoints; //走過的點
-	private boolean isPauseExe = true;
-	private boolean isStartExe = false;
-	private float speed = 0f; //速率
-	private int currentTimeSec = 0; //上個位置到此的時間
-	private LatLng currentPoint; //上一個位置
-	private float currentAltitude = 0f; //上一個位置海拔(feet)
+
 	private float caloric = 0; //消耗熱量
-	private float weight = 60 * 2.204623f; //體重(pb)
-	private int count = 0; //是否暫停的重複次數(沒動)
-	private int maxCount = 3; //最大嘗試次數
+	private float weight = 0; //體重(pb)
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -165,8 +156,6 @@ public class MainActivity extends Activity
 			isUpdateBikeTxt = true;
 		else
 			isUpdateBikeTxt = false;
-
-		
 
 	}
 
@@ -227,10 +216,11 @@ public class MainActivity extends Activity
 									sno.add(line.split(",")[0]);
 									sarea.add(line.split(",")[4]);
 
+									//Log.e("marker.getTitle()", "" + sno + "," + sarea);
 									new RealTimeBikeTask(MainActivity.this, map, markers).execute(sno, sarea);
 									break;
 								}
-								//Log.e("marker.getTitle()", "" + marker.getTitle() + "," + temp.split(",")[3]);
+
 								line = br.readLine();
 							}
 							fr.close();
@@ -258,14 +248,14 @@ public class MainActivity extends Activity
 					{
 						String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
 						directionPoint = marker.getPosition().latitude + "," + marker.getPosition().longitude;
-						MarkerClicked markerClicked = new MarkerClicked(MainActivity.this, map, directionPolyline, myLocationString);
-						markerClicked.ClickMarker(directionPoint);
+						InfoWindowClicked infoWindowClicked = new InfoWindowClicked(MainActivity.this, map, directionPolyline, myLocationString);
+						infoWindowClicked.ClickMarker(directionPoint);
 					}
 				});
 
 			}
 		}
-		
+
 	}
 
 	public void InitMapItems(File file, boolean isGetMarker)
@@ -461,14 +451,14 @@ public class MainActivity extends Activity
 		});
 	}
 
-	private void AutoUpdate()
+	private void AutoUpdate() //定時自動更新站點
 	{
 		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
 		isAutoUpdate = settings.getBoolean("isAutoUpdate", false);
 		isNearUpdate = settings.getBoolean("isNearUpdate", false);
-		
+
 		if (isAutoUpdate)
-		{			
+		{
 			udateRunnable = new Runnable()
 			{
 				@Override
@@ -485,7 +475,7 @@ public class MainActivity extends Activity
 			udateHandler.postDelayed(udateRunnable, 60 * 1000);//每 1min
 		}
 	}
-	
+
 	public void UpdateBike(boolean isAll, boolean isShowList) //更新站點資訊
 	{
 		InitMapItems(youBikeFile, true);
@@ -575,7 +565,7 @@ public class MainActivity extends Activity
 				switch (position)
 				{
 					case 0: //個人資訊
-						Intent intent = new Intent(MainActivity.this, MyInfoActivity.class);
+						Intent intent = new Intent(MainActivity.this, MyProfileActivity.class);
 						startActivity(intent);
 						break;
 					case 1: //更新附近(1KM)
@@ -585,23 +575,9 @@ public class MainActivity extends Activity
 						UpdateBike(true, true);
 						break;
 					case 3: //運動計時
-						if (isStartExe)
-						{
-							isStartExe = false;
-							isPauseExe = true;
-							layout_exercise.setVisibility(View.INVISIBLE);
-						}
-						else
-						{
-							isStartExe = true;
-							isPauseExe = false;
-							layout_exercise.setVisibility(View.VISIBLE);
-							myTracesPoints = new ArrayList<LatLng>();
-							timerSec = 0;
-							btn_pause.setText("暫停");
-							count = 0;
-							myTracesPoints = new ArrayList<LatLng>();
-						}
+						if (!isStartExe)
+							InitExercise();
+						FinishExercise();
 						break;
 					case 4: //設定
 						Intent intent1 = new Intent(MainActivity.this, SettingActivity.class);
@@ -629,148 +605,130 @@ public class MainActivity extends Activity
 
 	public void InitExercise() //運動
 	{
+		SharedPreferences settings = getSharedPreferences("Preference", 0);
+		weight = settings.getFloat("myWeight", 60f); //體重(pb)
+
 		//TODO
-		//		layout_exercise = (LinearLayout) findViewById(R.id.layout_exercise);
-		//		layout_exercise.setVisibility(View.INVISIBLE);
-		//		layout_exercise.setOnTouchListener(new OnTouchListener() //防止點到底下
-		//		{
-		//			public boolean onTouch(View v, MotionEvent event)
-		//			{
-		//				return true;
-		//			}
-		//		});
-		//
-		//		txt_timer = (TextView) findViewById(R.id.txt_timer);
-		//		txt_speed = (TextView) findViewById(R.id.txt_speed);
-		//		txt_caloric = (TextView) findViewById(R.id.txt_caloric);
-		//		txt_distance = (TextView) findViewById(R.id.txt_distance);
-		//
-		//		btn_pause = (Button) findViewById(R.id.btn_pause);
-		//		btn_pause.setOnClickListener(new OnClickListener()
-		//		{
-		//			@Override
-		//			public void onClick(View v)
-		//			{
-		//				if (!isPauseExe)
-		//				{
-		//					if (count <= maxCount)
-		//					{
-		//						isPauseExe = true;
-		//						btn_pause.setText("繼續");
-		//					}
-		//					else
-		//					{
-		//						btn_pause.setText("暫停");
-		//						count = 0;
-		//					}
-		//				}
-		//				else
-		//				//暫停中, 按下表示開始
-		//				{
-		//					isPauseExe = false;
-		//					btn_pause.setText("暫停");
-		//					count = 0;
-		//				}
-		//			}
-		//		});
-		//
-		//		timerSec = 0;
-		//		myTracesPoints = new ArrayList<LatLng>();
-		//
-		//		SharedPreferences settings = getSharedPreferences("Preference", 0);
-		//		weight = settings.getFloat("Weight", 60 * 2.204623f);
-		//
-		//		timeHandler.postDelayed(timerRun, 1000); //Timer
+		ExerciseTimerView exerciseTimerView = new ExerciseTimerView(MainActivity.this);
+		exerciseTimerView.Start();
+		//view1.SetTimeText("23");
+
+		AlertDialog.Builder builder;
+		AlertDialog alertDialog;
+
+		builder = new AlertDialog.Builder(MainActivity.this);
+		builder.setView(exerciseTimerView).setCancelable(false).setPositiveButton("OK", null);
+		alertDialog = builder.create();
+		alertDialog.show();
+
+		//alertDialog.getWindow().setContentView(R.layout.activity_myinfo);
+
+		DisplayMetrics dm = new DisplayMetrics(); // 建立一個DisplayMetrics物件
+		getWindowManager().getDefaultDisplay().getMetrics(dm); // 取得裝置的資訊
+		int Width = dm.widthPixels;
+		int Height = dm.heightPixels;
+
+		WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+		Window window = alertDialog.getWindow();
+		lp = window.getAttributes();
+
+		lp.width = (int) (Width * 0.8);
+		lp.height = (int) (Width * 0.9);
+		lp.alpha = 0.9f;
+		window.setAttributes(lp);
 	}
-
-	private final Runnable timerRun = new Runnable() //運動計時
-	{
-		public void run()
-		{
-			if (!isPauseExe)
-			{
-				if (count <= maxCount)
-					timerSec++; // 經過的秒數 + 1
-				else
-					btn_pause.setText("繼續");
-			}
-
-			String time = String.format("%02d:%02d:%02d", timerSec / 60 / 60, timerSec / 60 % 60, timerSec % 60 % 60);
-			txt_timer.setText(time);
-			timeHandler.postDelayed(this, 1000);
-		}
-	};
 
 	public void DoExercise() //於locationChange
 	{
 		if (isStartExe && locationClient.getLastLocation() != null && locationClient.isConnected())
 		{
-			float[] distance = new float[] { 0 };
-			if (currentPoint != null)
-				Location.distanceBetween(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude(), currentPoint.latitude, currentPoint.longitude, distance);
-
 			if (locationClient.getLastLocation().hasSpeed())
 			{
-				count = 0;
-				btn_pause.setText("暫停");
+				//speed = locationClient.getLastLocation().getSpeed() * 3.6f;// (currentDistance / currentTimeSec) * 3.6f; //時速
+				//大於30公分才紀錄
+				myTracesPoints.add(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude()));
 			}
-			else if (count <= maxCount)
+
+			myTracesDistance = 0;
+			float[] totalDistance = new float[1];
+			myTracesPolyline.setPoints(myTracesPoints);
+			for (int i = 0; i < myTracesPoints.size() - 1; i++)
 			{
-				count++;
-				speed = 0f;
+				Location.distanceBetween(myTracesPoints.get(i).latitude, myTracesPoints.get(i).longitude, myTracesPoints.get(i + 1).latitude, myTracesPoints.get(i + 1).longitude, totalDistance);
+				myTracesDistance += totalDistance[0] / 1000;
 			}
+		}
+	}
 
-			//Log.e("distance", distance[0] + ", " + count);
+	private void FinishExercise()
+	{
+		//http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
+		float aveSpeed = (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 1.609344f; //(myTracesDistance / timerSec) * 0.00044704f; //mph
 
-			if (!isPauseExe && count <= maxCount)
+		float coefficient = 0;
+		if (0 < aveSpeed && aveSpeed <= 15)
+			coefficient = 0.06f * (aveSpeed / 15);
+		else if (15 < aveSpeed && aveSpeed <= 16)
+			coefficient = 0.0615f;
+		else if (16 < aveSpeed && aveSpeed <= 17)
+			coefficient = 0.0675f;
+		else if (17 < aveSpeed && aveSpeed <= 18)
+			coefficient = 0.0740f;
+		else if (18 < aveSpeed && aveSpeed <= 19)
+			coefficient = 0.0811f;
+		else if (19 < aveSpeed && aveSpeed <= 20)
+			coefficient = 0.0891f;
+		else if (20 < aveSpeed && aveSpeed <= 21)
+			coefficient = 0.0975f;
+		else if (21 < aveSpeed && aveSpeed <= 23)
+			coefficient = 0.1173f;
+		else if (23 < aveSpeed && aveSpeed <= 25)
+			coefficient = 0.14f;
+
+		caloric = (float) ((coefficient * (weight * 2.204623f) * (exerciseTimerView.GetTotalTimeSecond() / 60) + locationClient.getLastLocation().getAltitude() / (100 * 0.3048f)) * 0.4f); //min*0.3, max*0.5
+
+		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		View layout = inflater.inflate(R.layout.exercise_finish_view, null);
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setView(layout);
+		AlertDialog dialog = builder.create();
+		dialog.show();
+	}
+
+	private void setUpLocationClientIfNeeded()
+	{
+		if (locationClient == null)
+		{
+			locationClient = new LocationClient(getApplicationContext(), new ConnectionCallbacks()
 			{
-				if (locationClient.getLastLocation().hasSpeed())
+				@Override
+				public void onDisconnected()
 				{
-					speed = locationClient.getLastLocation().getSpeed() * 3.6f;// (currentDistance / currentTimeSec) * 3.6f; //時速
-					//大於30公分才紀錄
-					myTracesPoints.add(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude()));
-				}
-				txt_speed.setText(String.format("%02.1f", speed));
-
-				myTracesDistance = 0;
-				float[] totalDistance = new float[1];
-				myTracesPolyline.setPoints(myTracesPoints);
-				for (int i = 0; i < myTracesPoints.size() - 1; i++)
-				{
-					Location.distanceBetween(myTracesPoints.get(i).latitude, myTracesPoints.get(i).longitude, myTracesPoints.get(i + 1).latitude, myTracesPoints.get(i + 1).longitude, totalDistance);
-					myTracesDistance += totalDistance[0] / 1000;
-					txt_distance.setText(String.format("%02.2f", myTracesDistance));
 				}
 
-				//http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
-				float aveSpeed = speed * 1.609344f; //(myTracesDistance / timerSec) * 0.00044704f; //mph
-				float coefficient = 0;
-				if (0 < aveSpeed && aveSpeed <= 15)
-					coefficient = 0.06f * (aveSpeed / 15);
-				else if (15 < aveSpeed && aveSpeed <= 16)
-					coefficient = 0.0615f;
-				else if (16 < aveSpeed && aveSpeed <= 17)
-					coefficient = 0.0675f;
-				else if (17 < aveSpeed && aveSpeed <= 18)
-					coefficient = 0.0740f;
-				else if (18 < aveSpeed && aveSpeed <= 19)
-					coefficient = 0.0811f;
-				else if (19 < aveSpeed && aveSpeed <= 20)
-					coefficient = 0.0891f;
-				else if (20 < aveSpeed && aveSpeed <= 21)
-					coefficient = 0.0975f;
-				else if (21 < aveSpeed && aveSpeed <= 23)
-					coefficient = 0.1173f;
-				else if (23 < aveSpeed && aveSpeed <= 25)
-					coefficient = 0.14f;
+				@Override
+				public void onConnected(Bundle arg0)
+				{
+					locationClient.requestLocationUpdates(REQUEST, new LocationListener()
+					{
+						@Override
+						public void onLocationChanged(Location location)
+						{
+							if (isDrection) //更新位置後要以自己位置重畫線
+								new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
 
-				caloric += (coefficient * weight * ((timerSec - currentTimeSec) / 60) + currentAltitude / (100 * 0.3048f)) * 0.4; //min*0.3, max*0.5
-				txt_caloric.setText(String.format("%02.1f", caloric));
-				currentAltitude = (float) locationClient.getLastLocation().getAltitude();
-
-				currentTimeSec = timerSec;
-			}
-			currentPoint = new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude());
+							DoExercise();
+						}
+					});
+				}
+			}, new OnConnectionFailedListener()
+			{
+				@Override
+				public void onConnectionFailed(ConnectionResult arg0)
+				{
+				}
+			});
 		}
 	}
 
@@ -793,42 +751,6 @@ public class MainActivity extends Activity
 			locationClient.disconnect();
 		}
 		udateHandler.removeCallbacks(udateRunnable);
-	}
-
-	private void setUpLocationClientIfNeeded()
-	{
-		if (locationClient == null)
-		{
-			locationClient = new LocationClient(getApplicationContext(), new ConnectionCallbacks()
-			{
-				@Override
-				public void onDisconnected()
-				{
-				}
-
-				@Override
-				public void onConnected(Bundle arg0)
-				{
-					locationClient.requestLocationUpdates(REQUEST, new LocationListener()
-					{
-						@Override
-						public void onLocationChanged(Location location)
-						{
-							if (isDrection)
-								new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
-
-							DoExercise();
-						}
-					});
-				}
-			}, new OnConnectionFailedListener()
-			{
-				@Override
-				public void onConnectionFailed(ConnectionResult arg0)
-				{
-				}
-			});
-		}
 	}
 
 	@Override

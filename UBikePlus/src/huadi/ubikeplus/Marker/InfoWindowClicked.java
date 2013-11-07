@@ -14,7 +14,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 
-public class MarkerClicked
+public class InfoWindowClicked
 {
 	Context context;
 	GoogleMap map;
@@ -23,7 +23,7 @@ public class MarkerClicked
 	
 	boolean isDrection = false;
 	
-	public MarkerClicked(Context context, GoogleMap map, Polyline directionPolyline, String myLocation)
+	public InfoWindowClicked(Context context, GoogleMap map, Polyline directionPolyline, String myLocation)
 	{
 		this.context = context;
 		this.map = map;

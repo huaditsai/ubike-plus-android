@@ -44,7 +44,7 @@
 
         <!-- A child of the main activity -->
         <activity
-            android:name="huadi.ubikeplus.MyInfoActivity"
+            android:name="huadi.ubikeplus.MyProfileActivity"
             android:label="@string/title_myInfo"
             android:parentActivityName="huadi.ubikeplus.MainActivity" >
 

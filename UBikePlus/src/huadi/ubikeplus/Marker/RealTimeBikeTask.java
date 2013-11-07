@@ -196,8 +196,8 @@ public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<Stri
 			public void onItemClick(AdapterView<?> a, View v, int which, long id)
 			{
 				String directionPoint = bikeLists.get(which).marker.getPosition().latitude + "," + bikeLists.get(which).marker.getPosition().longitude;
-				MarkerClicked markerClicked = new MarkerClicked(context, map, directionPolyline, myLocationString);
-				markerClicked.ClickMarker(directionPoint);
+				InfoWindowClicked infoWindowClicked = new InfoWindowClicked(context, map, directionPolyline, myLocationString);
+				infoWindowClicked.ClickMarker(directionPoint);
 			}
 		});
 
