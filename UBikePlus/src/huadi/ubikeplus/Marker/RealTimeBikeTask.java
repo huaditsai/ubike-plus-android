@@ -186,7 +186,7 @@ public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<Stri
 		int Width = dm.widthPixels;
 		int Height = dm.heightPixels;
 		LayoutParams lp = (LayoutParams) myListView.getLayoutParams();
-		lp.width = (int) (Width * 0.8);
+		lp.width = (int) (Width * 0.85);
 		lp.height = (int) (Height * 0.8);
 		myListView.setLayoutParams(lp);
 

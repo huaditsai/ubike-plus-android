@@ -115,8 +115,8 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 
 //				info_snippet.setText(snippetText);
 				info_snippet.setText(sarea);
-				myinfo_parking_text.setText(snippet.split(",")[0]);
-				myinfo_bike_text.setText(snippet.split(",")[1]);
+				myinfo_parking_text.setText(snippet.split(",")[1]);
+				myinfo_bike_text.setText(snippet.split(",")[0]);
 			}
 			else
 			{

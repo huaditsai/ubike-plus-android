@@ -178,7 +178,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 								{
 									map.addMarker(new MarkerOptions()
 									.position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2])))
-									.icon(BitmapDescriptorFactory.fromResource(R.drawable.bike_pin_green))
+									.icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike))
 									.title(line.split(",")[3])
 									.snippet(line.split(",")[4]));//0代號 5區 6英區 7 英位址
 								}
