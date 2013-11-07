@@ -44,8 +44,6 @@ public class MyInfoActivity extends Activity
 		setContentView(R.layout.activity_myinfo);
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 
-		setTitle("ªð¦^¦a¹Ï");
-
 		sharedPreferences = getSharedPreferences("Preference", 0);
 
 		img_myPic = (ImageView) findViewById(R.id.img_myPic);

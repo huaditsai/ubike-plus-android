@@ -1,0 +1,17 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory>
+        
+        <CheckBoxPreference
+            android:key="isAutoUpdate"
+            android:defaultValue="false"
+            android:summary="每分鐘自動更新"
+            android:title="定時更新" />
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="isNearUpdate"
+            android:summary="附近約  1 km"
+            android:title="自動更新只更新附近" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

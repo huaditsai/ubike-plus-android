@@ -27,6 +27,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -76,6 +77,7 @@ public class MainActivity extends Activity
 	private static final LatLng NTUE = new LatLng(25.024465, 121.544514);
 
 	private GoogleMap map;
+	private Runnable runnable; //慢慢把mark畫上
 	private List<Marker> allMarkers = new ArrayList<Marker>(); //所有點
 	ArrayList<BikeList> bikeLists = new ArrayList<BikeList>(); //站點列表
 
@@ -94,23 +96,24 @@ public class MainActivity extends Activity
 	private ListView drawerList;
 	private ImageButton drawerHomeButton; //按下開啟drawer
 
-	private boolean isUpdateBikeTxt = false;
 	private SearchView searchView;
 	private Marker marker; //搜尋完, 或長按地圖時用
 	private Polyline directionPolyline; //導航用
 	private String directionPoint = ""; //目的地
-	private boolean isDrection = false;
+	private boolean isDrection = false; //是否導航	
 
-	private Runnable runnable; //慢慢把mark畫上
-
+	private boolean isUpdateBikeTxt = false; //是否下載bike文件
 	private static final String TXT_YOUBIKENAME = "_YouBikeStation.txt";
 	private static final String TXT_BIKEUPDATEINFO = "_BikeUpdateInfo.txt";
-	private static final String TXT_NEWBIKENAME = "_NewBikeStation.txt";
-
 	private File youBikeFile;
 	private File infoFile;
-	String rootPath;
-	String serverPath = "http://120.127.14.60/Download/";
+	private String rootPath; //硬碟位置
+	private String serverPath = "http://120.127.14.60/Download/";
+
+	private boolean isAutoUpdate = false; //定時更新
+	private boolean isNearUpdate = false; //定時只更新附近
+	private Handler udateHandler = new Handler();
+	private Runnable udateRunnable; //定時更新用
 
 	private LinearLayout layout_exercise;
 	private static TextView txt_timer, txt_speed, txt_caloric, txt_distance;
@@ -124,7 +127,6 @@ public class MainActivity extends Activity
 	private boolean isStartExe = false;
 	private float speed = 0f; //速率
 	private int currentTimeSec = 0; //上個位置到此的時間
-	private float currentDistance = 0f; //與上一個位置的距離
 	private LatLng currentPoint; //上一個位置
 	private float currentAltitude = 0f; //上一個位置海拔(feet)
 	private float caloric = 0; //消耗熱量
@@ -164,6 +166,8 @@ public class MainActivity extends Activity
 		else
 			isUpdateBikeTxt = false;
 
+		
+
 	}
 
 	private void setUpMapIfNeeded()
@@ -176,6 +180,7 @@ public class MainActivity extends Activity
 				map.animateCamera(CameraUpdateFactory.newLatLngZoom(NTUE, 16));
 				map.setMyLocationEnabled(true); //定位
 
+				//設定google map 本身的UI
 				UiSettings uiSettings = map.getUiSettings();
 				uiSettings.setZoomControlsEnabled(false);
 				uiSettings.setCompassEnabled(false);
@@ -196,7 +201,7 @@ public class MainActivity extends Activity
 				if (!infoFile.exists())
 					new DownloadTask(MainActivity.this, map, TXT_BIKEUPDATEINFO, true).execute(serverPath + TXT_BIKEUPDATEINFO);
 
-				map.setOnMarkerClickListener(new OnMarkerClickListener() //MarkerClic
+				map.setOnMarkerClickListener(new OnMarkerClickListener() //MarkerClick
 				{
 					@Override
 					public boolean onMarkerClick(Marker marker)
@@ -259,8 +264,8 @@ public class MainActivity extends Activity
 				});
 
 			}
-
 		}
+		
 	}
 
 	public void InitMapItems(File file, boolean isGetMarker)
@@ -346,9 +351,6 @@ public class MainActivity extends Activity
 		DisplayMetrics dm = new DisplayMetrics();
 		this.getWindowManager().getDefaultDisplay().getMetrics(dm);
 
-		int vWidth = dm.widthPixels;
-		int vHeight = dm.heightPixels;
-
 		compass = (ImageButton) findViewById(R.id.btn_compass);
 		compass.setVisibility(ImageButton.GONE);
 
@@ -384,7 +386,7 @@ public class MainActivity extends Activity
 		});
 	}
 
-	public void SetMyLocationBtn()
+	public void SetMyLocationBtn() //我的位置按鈕
 	{
 		myLocationButton = (ImageButton) findViewById(R.id.btn_myLocat);
 		myLocationButton.setOnTouchListener(new OnTouchListener()
@@ -433,7 +435,7 @@ public class MainActivity extends Activity
 		});
 	}
 
-	public void SetSearchView()
+	public void SetSearchView() //搜尋
 	{
 		marker = map.addMarker(new MarkerOptions().position(NTUE).visible(false));
 
@@ -459,7 +461,32 @@ public class MainActivity extends Activity
 		});
 	}
 
-	public void UpdateBike(boolean isAll)
+	private void AutoUpdate()
+	{
+		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+		isAutoUpdate = settings.getBoolean("isAutoUpdate", false);
+		isNearUpdate = settings.getBoolean("isNearUpdate", false);
+		
+		if (isAutoUpdate)
+		{			
+			udateRunnable = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					if (isNearUpdate)
+						UpdateBike(false, false);
+					else
+						UpdateBike(true, false);
+
+					udateHandler.postDelayed(this, 60 * 1000);
+				}
+			};
+			udateHandler.postDelayed(udateRunnable, 60 * 1000);//每 1min
+		}
+	}
+	
+	public void UpdateBike(boolean isAll, boolean isShowList) //更新站點資訊
 	{
 		InitMapItems(youBikeFile, true);
 
@@ -507,12 +534,17 @@ public class MainActivity extends Activity
 			String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
 			if (!isAll && markers.size() > 0)
 			{
-				new RealTimeBikeTask(MainActivity.this, map, markers, directionPolyline, myLocationString).execute(snos, sareas);
-
+				if (isShowList)
+					new RealTimeBikeTask(MainActivity.this, map, markers, directionPolyline, myLocationString).execute(snos, sareas);
+				else
+					new RealTimeBikeTask(MainActivity.this, map, markers).execute(snos, sareas);
 			}
 			if (isAll && allMarkers.size() > 0)
 			{
-				new RealTimeBikeTask(MainActivity.this, map, allMarkers, directionPolyline, myLocationString).execute(snos, sareas);
+				if (isShowList)
+					new RealTimeBikeTask(MainActivity.this, map, allMarkers, directionPolyline, myLocationString).execute(snos, sareas);
+				else
+					new RealTimeBikeTask(MainActivity.this, map, allMarkers).execute(snos, sareas);
 			}
 		}
 		catch (Exception e)
@@ -547,10 +579,10 @@ public class MainActivity extends Activity
 						startActivity(intent);
 						break;
 					case 1: //更新附近(1KM)
-						UpdateBike(false);
+						UpdateBike(false, true);
 						break;
 					case 2: //更新全部
-						UpdateBike(true);
+						UpdateBike(true, true);
 						break;
 					case 3: //運動計時
 						if (isStartExe)
@@ -570,12 +602,8 @@ public class MainActivity extends Activity
 							count = 0;
 							myTracesPoints = new ArrayList<LatLng>();
 						}
-
 						break;
-					case 4: //社群分享
-
-						break;
-					case 5: //設定
+					case 4: //設定
 						Intent intent1 = new Intent(MainActivity.this, SettingActivity.class);
 						startActivity(intent1);
 						break;
@@ -740,7 +768,6 @@ public class MainActivity extends Activity
 				txt_caloric.setText(String.format("%02.1f", caloric));
 				currentAltitude = (float) locationClient.getLastLocation().getAltitude();
 
-				currentDistance = distance[0];
 				currentTimeSec = timerSec;
 			}
 			currentPoint = new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude());
@@ -754,6 +781,7 @@ public class MainActivity extends Activity
 		setUpMapIfNeeded();
 		setUpLocationClientIfNeeded();
 		locationClient.connect();
+		AutoUpdate();
 	}
 
 	@Override
@@ -764,6 +792,7 @@ public class MainActivity extends Activity
 		{
 			locationClient.disconnect();
 		}
+		udateHandler.removeCallbacks(udateRunnable);
 	}
 
 	private void setUpLocationClientIfNeeded()
