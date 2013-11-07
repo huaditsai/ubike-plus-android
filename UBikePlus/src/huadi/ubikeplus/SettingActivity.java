@@ -2,11 +2,15 @@ package huadi.ubikeplus;
 
 import android.app.TaskStackBuilder;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.support.v4.app.NavUtils;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 
 public class SettingActivity extends PreferenceActivity
 {
@@ -15,7 +19,8 @@ public class SettingActivity extends PreferenceActivity
 	{
 		super.onCreate(savedInstanceState);
 //		setContentView(R.layout.activity_setting);
-		getActionBar().setDisplayHomeAsUpEnabled(true);		
+		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getActionBar().setBackgroundDrawable(getResources().getDrawable(R.drawable.actionbar_bg));	
 		
 		getFragmentManager().beginTransaction().replace(android.R.id.content, new MyPreferenceFragment()).commit();
 	}
@@ -27,6 +32,17 @@ public class SettingActivity extends PreferenceActivity
         {
             super.onCreate(savedInstanceState);
             addPreferencesFromResource(R.xml.preferences);
+        }
+        
+        //§ï­I´º¦â
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                Bundle savedInstanceState) {
+            View v = super.onCreateView(inflater, container, savedInstanceState);
+            if(v != null) {
+            	v.setBackgroundColor(Color.rgb(221, 225, 232));
+            }
+            return v;
         }
     }
 
