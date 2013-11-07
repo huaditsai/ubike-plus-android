@@ -10,12 +10,20 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PorterDuff.Mode;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.NavUtils;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -108,7 +116,7 @@ public class MyInfoActivity extends Activity
 			}
 		});
 
-		Uri imgUri = Uri.parse(sharedPreferences.getString("ImgUri", "android.resource://huadi.ubikeplus/drawable/ic_launcher"));
+		Uri imgUri = Uri.parse(sharedPreferences.getString("ImgUri", "android.resource://huadi.ubikeplus/drawable/facebook_profile_image"));
 		img_myPic.setImageURI(imgUri);
 
 		ScaleImg(imgUri);
@@ -203,8 +211,23 @@ public class MyInfoActivity extends Activity
 			Matrix matrix = new Matrix();
 			matrix.postScale(scale, scale);
 			Bitmap newbm = Bitmap.createBitmap(bmp, 0, 0, width, height, matrix, true);
+			
+			//µe¶ê§Î
+		    Bitmap output = Bitmap.createBitmap(newbm.getWidth(), newbm.getHeight(), Config.ARGB_8888);
+		    Canvas canvas = new Canvas(output);
 
-			img_myPic.setImageBitmap(newbm);
+		    final int color = 0xff424242;
+		    final Paint paint = new Paint();
+		    final Rect rect = new Rect(0, 0, newbm.getWidth(), newbm.getHeight());
+
+		    paint.setAntiAlias(true);
+		    canvas.drawARGB(0, 0, 0, 0);
+		    paint.setColor(color);
+		    canvas.drawCircle(newbm.getWidth() / 2, newbm.getHeight() / 2, newbm.getWidth() / 2, paint);
+		    paint.setXfermode(new PorterDuffXfermode(Mode.SRC_IN));
+		    canvas.drawBitmap(newbm, rect, rect, paint);
+		    
+			img_myPic.setImageBitmap(output);
 		}
 		catch (FileNotFoundException e)
 		{
