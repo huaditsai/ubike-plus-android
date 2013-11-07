@@ -2,19 +2,18 @@ package huadi.ubikeplus;
 
 import huadi.ubikeplus.Drawer.DrawerItemAdapter;
 import huadi.ubikeplus.Drawer.DrawerListMoedel;
+import huadi.ubikeplus.Marker.MarkerClicked;
 import huadi.ubikeplus.Marker.MyInfoWindowAdapter;
 import huadi.ubikeplus.Marker.RealTimeBikeTask;
 import huadi.ubikeplus.Route.GeocoderTask;
 import huadi.ubikeplus.Route.GoogleDirectionTask;
-import huadi.ubikeplus.Route.GoogleDistanceMatrixTask;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -35,16 +34,12 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
-import android.view.ViewGroup.LayoutParams;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
@@ -54,14 +49,7 @@ import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.SearchView.OnQueryTextListener;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.facebook.FacebookException;
-import com.facebook.FacebookOperationCanceledException;
-import com.facebook.Session;
-import com.facebook.SessionState;
-import com.facebook.widget.WebDialog;
-import com.facebook.widget.WebDialog.OnCompleteListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
@@ -164,15 +152,17 @@ public class MainActivity extends Activity
 		InitExercise();
 
 		SharedPreferences settings = getSharedPreferences("Preference", 0);
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-		int currentDateTime = Integer.parseInt(sdf.format(new Date()));
-		if (settings.contains("UpdateTime"))
-		{
-			if (settings.getInt("UpdateTime", 0) < currentDateTime) //該更新了
-				isUpdateBikeTxt = true;
-			else
-				isUpdateBikeTxt = false;
-		}
+
+		Calendar calendar = Calendar.getInstance();
+		int year = calendar.get(Calendar.YEAR); //民國
+		int month = calendar.get(Calendar.MONTH) + 1; //Calendar.MONTH 從0開始...
+		int day = calendar.get(Calendar.DATE);
+		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
+		//Log.e("123", "" + currentDateTime);		
+		if (settings.getInt("UpdateTime", 0) < currentDateTime) //該更新了
+			isUpdateBikeTxt = true;
+		else
+			isUpdateBikeTxt = false;
 
 	}
 
@@ -218,10 +208,10 @@ public class MainActivity extends Activity
 						{
 							FileReader fr = new FileReader(youBikeFile);
 							final BufferedReader br = new BufferedReader(fr);
-							String temp = br.readLine(); //readLine()讀取一整行
-							while (temp != null)
+							String line = br.readLine(); //readLine()讀取一整行
+							while (line != null)
 							{
-								if (marker.getTitle().equals(temp.split(",")[3])) //跟0001合併了
+								if (marker.getTitle().equals(line.split(",")[3]))
 								{
 									List<Marker> markers = new ArrayList<Marker>();
 									markers.add(marker);
@@ -229,14 +219,14 @@ public class MainActivity extends Activity
 									List<String> sno = new ArrayList<String>();
 									List<String> sarea = new ArrayList<String>();
 
-									sno.add(temp.split(",")[0]);
-									sarea.add(temp.split(",")[4]);
+									sno.add(line.split(",")[0]);
+									sarea.add(line.split(",")[4]);
 
 									new RealTimeBikeTask(MainActivity.this, map, markers).execute(sno, sarea);
 									break;
 								}
 								//Log.e("marker.getTitle()", "" + marker.getTitle() + "," + temp.split(",")[3]);
-								temp = br.readLine();
+								line = br.readLine();
 							}
 							fr.close();
 							br.close();
@@ -251,69 +241,26 @@ public class MainActivity extends Activity
 				});
 
 				directionPolyline = map.addPolyline(new PolylineOptions() //劃一條導航用的線
-				.width(5).color(Color.argb(120, 70, 50, 200)).geodesic(true));
+				.width(10).color(Color.argb(120, 70, 50, 200)).geodesic(true));
 
 				myTracesPolyline = map.addPolyline(new PolylineOptions() //走過的線
-				.width(7).color(Color.argb(150, 255, 85, 18)).geodesic(true));
+				.width(10).color(Color.argb(150, 255, 85, 18)).geodesic(true));
 
 				map.setOnInfoWindowClickListener(new OnInfoWindowClickListener() //InfoWindowClick
 				{
 					@Override
 					public void onInfoWindowClick(final Marker marker)
 					{
+						String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
 						directionPoint = marker.getPosition().latitude + "," + marker.getPosition().longitude;
-						ClickMarker(directionPoint);
+						MarkerClicked markerClicked = new MarkerClicked(MainActivity.this, map, directionPolyline, myLocationString);
+						markerClicked.ClickMarker(directionPoint);
 					}
 				});
 
 			}
 
 		}
-	}
-	
-	public void ClickMarker(final String directionPoint)
-	{		
-		List<String> distanceMatrix = new ArrayList<String>();
-		int cost = 0; //預計花費
-		try
-		{
-			distanceMatrix = new GoogleDistanceMatrixTask().execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint).get();
-			int timeMin = Integer.parseInt(distanceMatrix.get(3)) / 60; //預計時間(走路)
-			if (timeMin < 30)
-				cost = 0;
-			else if (timeMin >= 30 && timeMin < 240)
-			{
-				cost = timeMin / 30 * 10;
-			}
-			else if (timeMin >= 240 && timeMin < 480)
-			{
-				cost = timeMin / 30 * 20;
-			}
-			else if (timeMin >= 480)
-			{
-				cost = timeMin / 30 * 40;
-			}
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-
-		new AlertDialog.Builder(MainActivity.this).setTitle("路徑規劃 , 將此點設為路徑終點?").setMessage("與此地距離 " + distanceMatrix.get(0) + "\n走路花費時間 約 " + distanceMatrix.get(1) + "\nYouBike會員花費 約 " + cost + " 元").setPositiveButton("確定", new DialogInterface.OnClickListener()
-		{
-			@Override
-			public void onClick(DialogInterface dialog, int which)
-			{
-				new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
-				isDrection = true;
-			}
-		}).setNegativeButton("取消", new DialogInterface.OnClickListener()
-		{
-			@Override
-			public void onClick(DialogInterface dialog, int which)
-			{
-			}
-		}).show();
 	}
 
 	public void InitMapItems(File file, boolean isGetMarker)
@@ -322,7 +269,10 @@ public class MainActivity extends Activity
 		allMarkers = new ArrayList<Marker>();
 
 		directionPolyline = map.addPolyline(new PolylineOptions() //劃一條導航用的線
-		.width(5).color(Color.argb(120, 70, 50, 200)).geodesic(true));
+		.width(10).color(Color.argb(120, 70, 50, 200)).geodesic(true));
+
+		myTracesPolyline = map.addPolyline(new PolylineOptions() //走過的線
+		.width(10).color(Color.argb(150, 255, 85, 18)).geodesic(true));
 
 		marker = map.addMarker(new MarkerOptions().position(NTUE).visible(false)); //searchView
 
@@ -336,12 +286,11 @@ public class MainActivity extends Activity
 				String line = br.readLine();
 				while (line != null)
 				{
-					if (!line.split(",")[0].equals("0000"))
-					{
-						Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
 
-						allMarkers.add(marker); //新增到所有點中						
-					}
+					Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+
+					allMarkers.add(marker); //新增到所有點中						
+
 					line = br.readLine();
 				}
 				fr.close();
@@ -362,12 +311,10 @@ public class MainActivity extends Activity
 							if (line != null)
 							{
 								//Log.e("br.readLine()", line);
-								if (!line.split(",")[0].equals("0000"))
-								{
-									Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
 
-									allMarkers.add(marker); //新增到所有點中
-								}
+								Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+
+								allMarkers.add(marker); //新增到所有點中
 							}
 							else
 							{
@@ -397,14 +344,14 @@ public class MainActivity extends Activity
 	public void SetCompassBtn() //旋轉到地圖時才出現
 	{
 		DisplayMetrics dm = new DisplayMetrics();
-        this.getWindowManager().getDefaultDisplay().getMetrics(dm);
-        
-        int vWidth = dm.widthPixels;
-        int vHeight = dm.heightPixels;
-		
+		this.getWindowManager().getDefaultDisplay().getMetrics(dm);
+
+		int vWidth = dm.widthPixels;
+		int vHeight = dm.heightPixels;
+
 		compass = (ImageButton) findViewById(R.id.btn_compass);
 		compass.setVisibility(ImageButton.GONE);
-		
+
 		map.setOnCameraChangeListener(new OnCameraChangeListener()
 		{
 			@Override
@@ -512,103 +459,7 @@ public class MainActivity extends Activity
 		});
 	}
 
-	protected void ActionAlertDialog() //彈出站點列表
-	{
-		//ArrayList<PP> list = initData();
-		AlertDialog.Builder builder;
-		AlertDialog alertDialog;
-
-		LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-		View layout = inflater.inflate(R.layout.bike_listview, (ViewGroup) findViewById(R.id.layout_myview));
-
-		ListView myListView = (ListView) layout.findViewById(R.id.mylistview);
-		BikeListAdapter adapter = new BikeListAdapter(MainActivity.this, bikeLists);
-		myListView.setAdapter(adapter);
-		myListView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
-
-		DisplayMetrics dm = new DisplayMetrics(); // 建立一個DisplayMetrics物件
-		this.getWindowManager().getDefaultDisplay().getMetrics(dm); // 取得裝置的資訊
-		int Width = dm.widthPixels;
-		int Height = dm.heightPixels;
-		LayoutParams lp = (LayoutParams) myListView.getLayoutParams();
-		lp.width = (int) (Width * 0.8);
-		lp.height = (int) (Height * 0.8);
-		myListView.setLayoutParams(lp);
-
-		myListView.setOnItemClickListener(new OnItemClickListener()
-		{
-			@Override
-			public void onItemClick(AdapterView<?> a, View v, int which, long id)
-			{
-				String directionPoint = bikeLists.get(which).marker.getPosition().latitude + "," + bikeLists.get(which).marker.getPosition().longitude;
-				ClickMarker(directionPoint);
-			}
-		});
-
-		builder = new AlertDialog.Builder(MainActivity.this);
-		builder.setNegativeButton("CLOSE", new DialogInterface.OnClickListener()
-		{
-			@Override
-			public void onClick(DialogInterface dialog, int which)
-			{
-				dialog.dismiss();
-			}
-		});
-		builder.setView(layout);
-
-		alertDialog = builder.create();
-		alertDialog.show();
-	}
-
-	protected ArrayList<BikeList> initData(List<Marker> markers, List<String> info, List<String> sareas)
-	{ //站點列表的內容
-		ArrayList<BikeList> list = new ArrayList<BikeList>();
-		BikeList p;
-		List<String> distanceMatrix = new ArrayList<String>();
-		for (int i = 0; i < markers.size(); i++)
-		{
-			try
-			{
-				distanceMatrix = new GoogleDistanceMatrixTask().execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), markers.get(i).getPosition().latitude + "," + markers.get(i).getPosition().longitude).get();
-			}
-			catch (Exception e)
-			{
-				// TODO 自動產生的 catch 區塊
-				e.printStackTrace();
-			}
-			p = new BikeList();
-
-			p.marker = markers.get(i);
-			p.img_pin = R.drawable.map_havebike;
-			p.txt_title = markers.get(i).getTitle();
-			p.txt_area = sareas.get(i);
-
-			p.txt_bike = info.get(i).split(",")[0];
-			if (p.txt_bike.equals("0"))
-				p.img_pin = R.drawable.map_nobike;
-
-			p.txt_stop = info.get(i).split(",")[1];
-			if (p.txt_stop.equals("0"))
-				p.img_pin = R.drawable.map_nopark;
-
-			p.txt_distance = distanceMatrix.get(0);
-			p.distanceValue = Float.parseFloat(distanceMatrix.get(2));
-			p.txt_time = "走路約 " + distanceMatrix.get(1);
-
-			list.add(p);
-		}
-
-		Collections.sort(list, new Comparator<BikeList>() //依距離排續
-		{
-			public int compare(BikeList o1, BikeList o2)
-			{
-				return Float.valueOf(o1.distanceValue).compareTo(Float.valueOf(o2.distanceValue));
-			}
-		});
-		return list;
-	}
-
-	public void UpdateBike(boolean isAll, boolean isShowList)
+	public void UpdateBike(boolean isAll)
 	{
 		InitMapItems(youBikeFile, true);
 
@@ -616,61 +467,52 @@ public class MainActivity extends Activity
 		{
 			FileReader fr = new FileReader(youBikeFile);
 			final BufferedReader br = new BufferedReader(fr);
-			String temp = br.readLine(); //readLine()讀取一整行
+
+			String line = br.readLine(); //readLine()讀取一整行
+
 			List<Marker> markers = new ArrayList<Marker>();
 			List<String> snos = new ArrayList<String>(); //所有編號
 			List<String> sareas = new ArrayList<String>(); //所有地址
+
 			int i = 0;
 			if (!isAll) //附近
-				while (temp != null)
+				while (line != null)
 				{
-					if (!temp.split(",")[0].equals("0000"))
-					{
-						float[] distance = new float[1];
-						Location.distanceBetween(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude(), allMarkers.get(i).getPosition().latitude, allMarkers.get(i).getPosition().longitude, distance);
+					float[] distance = new float[1];
+					Location.distanceBetween(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude(), allMarkers.get(i).getPosition().latitude, allMarkers.get(i).getPosition().longitude, distance);
 
-						if (distance[0] <= 1000) //半徑1KM
-						{
-							markers.add(allMarkers.get(i));
-							snos.add(temp.split(",")[0]);
-							sareas.add(temp.split(",")[4]);
-						}
-						i++;
+					if (distance[0] <= 1000) //半徑1KM
+					{
+						markers.add(allMarkers.get(i));
+						snos.add(line.split(",")[0]);
+						sareas.add(line.split(",")[4]);
 					}
-					temp = br.readLine();
+					i++;
+
+					line = br.readLine();
 				}
 			else
 				//全部				
-				while (temp != null)
+				while (line != null)
 				{
-					if (!temp.split(",")[0].equals("0000"))
-					{
-						snos.add(temp.split(",")[0]);
-						sareas.add(temp.split(",")[4]);
-					}
-					temp = br.readLine();
+					snos.add(line.split(",")[0]);
+					sareas.add(line.split(",")[4]);
+
+					line = br.readLine();
 				}
 
 			fr.close();
 			br.close();
+
+			String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
 			if (!isAll && markers.size() > 0)
 			{
-				List<String> info = new RealTimeBikeTask(MainActivity.this, map, markers).execute(snos, sareas).get();
+				new RealTimeBikeTask(MainActivity.this, map, markers, directionPolyline, myLocationString).execute(snos, sareas);
 
-				if (isShowList)
-				{
-					bikeLists = initData(markers, info, sareas);
-					ActionAlertDialog();
-				}
 			}
 			if (isAll && allMarkers.size() > 0)
 			{
-				List<String> info = new RealTimeBikeTask(MainActivity.this, map, allMarkers).execute(snos, sareas).get();
-				if (isShowList)
-				{
-					bikeLists = initData(allMarkers, info, sareas);
-					ActionAlertDialog();
-				}
+				new RealTimeBikeTask(MainActivity.this, map, allMarkers, directionPolyline, myLocationString).execute(snos, sareas);
 			}
 		}
 		catch (Exception e)
@@ -704,12 +546,11 @@ public class MainActivity extends Activity
 						Intent intent = new Intent(MainActivity.this, MyInfoActivity.class);
 						startActivity(intent);
 						break;
-
 					case 1: //更新附近(1KM)
-						UpdateBike(false, true);
+						UpdateBike(false);
 						break;
 					case 2: //更新全部
-						UpdateBike(true, true);
+						UpdateBike(true);
 						break;
 					case 3: //運動計時
 						if (isStartExe)
