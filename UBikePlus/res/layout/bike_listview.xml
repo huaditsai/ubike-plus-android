@@ -3,11 +3,13 @@
     android:id="@+id/layout_myview"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical" >
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#dde1e8" >
 
     <ListView
         android:id="@+id/mylistview"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content" >
     </ListView>
 

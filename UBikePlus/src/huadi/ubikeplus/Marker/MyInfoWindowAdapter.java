@@ -5,7 +5,9 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
@@ -83,29 +85,38 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 			}
 
 			TextView info_snippet = (TextView) v.findViewById(R.id.info_snippet);
+			ImageView myinfo_parking = (ImageView) v.findViewById(R.id.myinfo_parking);
+			ImageView myinfo_bike = (ImageView) v.findViewById(R.id.myinfo_bike);
+			TextView myinfo_parking_text = (TextView) v.findViewById(R.id.myinfo_parking_text);
+			TextView myinfo_bike_text = (TextView) v.findViewById(R.id.myinfo_bike_text);
 
 			if (!snippet.equals("代刚┪蝴い..."))
 			{
 				SpannableString snippetText = new SpannableString(sarea + "\r\nó进 : " + snippet.split(",")[0] + "\r\n氨 : " + snippet.split(",")[1]);
 				String bikeHeadString = sarea + "\r\nó进 : ";
 				String stopHeadString = sarea + "\r\nó进 : " + snippet.split(",")[0] + "\r\n氨 : ";
-				
+								
 				marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike));
 				
 				if (snippet.split(",")[0].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), bikeHeadString.length(), bikeHeadString.length() + snippet.split(",")[0].length(), 0);
+					myinfo_parking_text.setTextColor(Color.RED);
 					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nobike));
 				}
 				else if (snippet.split(",")[1].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), stopHeadString.length(), snippetText.length(), 0);
+					myinfo_bike_text.setTextColor(Color.RED);
 					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nopark));
 				}
 				else if(snippet.split(",")[1].equals("null") && snippet.split(",")[1].equals("null"))
 					marker.setVisible(false);
 
-				info_snippet.setText(snippetText);
+//				info_snippet.setText(snippetText);
+				info_snippet.setText(sarea);
+				myinfo_parking_text.setText(snippet.split(",")[0]);
+				myinfo_bike_text.setText(snippet.split(",")[1]);
 			}
 			else
 			{

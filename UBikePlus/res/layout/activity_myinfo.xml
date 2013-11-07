@@ -2,7 +2,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_centerInParent="true"
-    android:background="#dee1e8"
+    android:background="#dde1e8"
     android:gravity="center"
     android:orientation="vertical" 
     android:padding="50dp">
