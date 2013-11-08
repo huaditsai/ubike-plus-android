@@ -1,5 +1,6 @@
 package huadi.ubikeplus;
 
+import android.R.bool;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -152,6 +153,11 @@ public class ExerciseTimerView extends View
 	public float GetTotalTimeSecond()
 	{
 		return timePercentSecond / 100f;
+	}
+	
+	public boolean IsTimerStart()
+	{
+		return isTimerStart;
 	}
 
 	public boolean IsStop()

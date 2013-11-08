@@ -119,11 +119,12 @@ public class MainActivity extends Activity
 	private Runnable udateRunnable; //定時更新用
 
 	private boolean isStartExe = false; //運動
+	private boolean isTimerStart = false; //計時開始
 	private AlertDialog exeDialog; //秀運動視窗
 	private Handler exeHandler = new Handler(); //檢查是否停止用
 
 	private ExerciseTimerView exerciseTimerView; //計時視窗
-	private float myTracesDistance = 0f; //走過的總距離
+	private float myTracesDistance = 0f; //走過的總距離(km)
 	private Polyline myTracesPolyline; //走過的痕跡
 	private List<LatLng> myTracesPoints; //走過的點
 
@@ -650,7 +651,7 @@ public class MainActivity extends Activity
 		exeHandler.postDelayed(timerRun, 10);
 	}
 
-	private final Runnable timerRun = new Runnable() //運動計時
+	private final Runnable timerRun = new Runnable() //檢查運動狀態
 	{
 		@Override
 		public void run()
@@ -663,7 +664,10 @@ public class MainActivity extends Activity
 				FinishExercise();
 			}
 			else
+			{
+				isTimerStart = exerciseTimerView.IsTimerStart();
 				exeHandler.postDelayed(timerRun, 100);
+			}
 		}
 	};
 
@@ -671,10 +675,9 @@ public class MainActivity extends Activity
 	{
 		if (isStartExe && locationClient.getLastLocation() != null && locationClient.isConnected())
 		{
-			if (locationClient.getLastLocation().hasSpeed())
+			if (isTimerStart && locationClient.getLastLocation().hasSpeed())
 			{
 				//speed = locationClient.getLastLocation().getSpeed() * 3.6f;// (currentDistance / currentTimeSec) * 3.6f; //時速
-				//大於30公分才紀錄
 				myTracesPoints.add(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude()));
 
 				myTracesDistance = 0;
@@ -691,31 +694,32 @@ public class MainActivity extends Activity
 		}
 	}
 
-	private void FinishExercise()
+	private void FinishExercise() //結束運動
 	{
 		//http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
-		float aveSpeed = (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 1.609344f; //(myTracesDistance / timerSec) * 0.00044704f; //mph
+		float aveSpeed = myTracesDistance / (exerciseTimerView.GetTotalTimeSecond() / 3600f); //km/hr
+		float aveSpeed_mph = aveSpeed * 0.621371192f; //mph
 		if (myTracesDistance == 0 || exerciseTimerView.GetTotalTimeSecond() == 0)
 			aveSpeed = 0;
 
 		float coefficient = 0;
-		if (0 < aveSpeed && aveSpeed <= 15)
-			coefficient = 0.06f * (aveSpeed / 15);
-		else if (15 < aveSpeed && aveSpeed <= 16)
+		if (0 < aveSpeed_mph && aveSpeed_mph <= 15)
+			coefficient = 0.06f * (aveSpeed_mph / 15);
+		else if (15 < aveSpeed_mph && aveSpeed_mph <= 16)
 			coefficient = 0.0615f;
-		else if (16 < aveSpeed && aveSpeed <= 17)
+		else if (16 < aveSpeed_mph && aveSpeed_mph <= 17)
 			coefficient = 0.0675f;
-		else if (17 < aveSpeed && aveSpeed <= 18)
+		else if (17 < aveSpeed_mph && aveSpeed_mph <= 18)
 			coefficient = 0.0740f;
-		else if (18 < aveSpeed && aveSpeed <= 19)
+		else if (18 < aveSpeed_mph && aveSpeed_mph <= 19)
 			coefficient = 0.0811f;
-		else if (19 < aveSpeed && aveSpeed <= 20)
+		else if (19 < aveSpeed_mph && aveSpeed_mph <= 20)
 			coefficient = 0.0891f;
-		else if (20 < aveSpeed && aveSpeed <= 21)
+		else if (20 < aveSpeed_mph && aveSpeed_mph <= 21)
 			coefficient = 0.0975f;
-		else if (21 < aveSpeed && aveSpeed <= 23)
+		else if (21 < aveSpeed_mph && aveSpeed_mph <= 23)
 			coefficient = 0.1173f;
-		else if (23 < aveSpeed && aveSpeed <= 25)
+		else if (23 < aveSpeed_mph && aveSpeed_mph <= 25)
 			coefficient = 0.14f;
 
 		caloric = (float) ((coefficient * (weight * 2.204623f) * (exerciseTimerView.GetTotalTimeSecond() / 60) + locationClient.getLastLocation().getAltitude() / (100 * 0.3048f)) * 0.4f); //min*0.3, max*0.5
@@ -728,9 +732,9 @@ public class MainActivity extends Activity
 		TextView txt_exercise_speed = (TextView) layout.findViewById(R.id.txt_exercise_speed);
 		TextView txt_exercise_caloric = (TextView) layout.findViewById(R.id.txt_exercise_caloric);
 
-		txt_exercise_distance.setText(myTracesDistance + " Km");
+		txt_exercise_distance.setText(String.format("%.2f Km", myTracesDistance));
 		txt_exercise_time.setText(String.format("%02d:%02d:%02d", (int) exerciseTimerView.GetTotalTimeSecond() / 3600, (int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60, (int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
-		txt_exercise_speed.setText(String.format("%02.2f km/hr", (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 3.6f));
+		txt_exercise_speed.setText(String.format("%.1f km/hr", aveSpeed));
 		txt_exercise_caloric.setText(caloric + " caloric");
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);

@@ -131,31 +131,29 @@ public class MyProfileActivity extends Activity
 		});
 
 		txt_myWeight = (TextView) findViewById(R.id.txt_myWeight);
-		if (!sharedPreferences.getBoolean("hasWeight", false))
-		{			
-			txt_myWeight.setOnClickListener(new OnClickListener()
-			{
-				@Override
-				public void onClick(View v)
-				{
-					final EditText inputEditText = new EditText(MyProfileActivity.this);
-					inputEditText.setSingleLine();
-					inputEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
-
-					new AlertDialog.Builder(MyProfileActivity.this).setTitle("請輸入體重 (公斤)").setView(inputEditText).setPositiveButton("Ok", new DialogInterface.OnClickListener()
-					{
-						public void onClick(DialogInterface dialog, int whichButton)
-						{
-							txt_myWeight.setText(inputEditText.getText() + " kg");
-							sharedPreferences.edit().putFloat("myWeight", Float.parseFloat(inputEditText.getText().toString())).commit();
-							sharedPreferences.edit().putBoolean("hasWeight", true).commit();
-						}
-					}).setNegativeButton("Cancel", null).show();
-				}
-			});
-		}
-		else
+		if (sharedPreferences.getBoolean("hasWeight", false))
 			txt_myWeight.setText(sharedPreferences.getFloat("myWeight", 60f) + " kg");
+		txt_myWeight.setOnClickListener(new OnClickListener()
+		{
+			@Override
+			public void onClick(View v)
+			{
+				final EditText inputEditText = new EditText(MyProfileActivity.this);
+				inputEditText.setSingleLine();
+				inputEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+				new AlertDialog.Builder(MyProfileActivity.this).setTitle("請輸入體重 (公斤)").setView(inputEditText).setPositiveButton("Ok", new DialogInterface.OnClickListener()
+				{
+					public void onClick(DialogInterface dialog, int whichButton)
+					{
+						txt_myWeight.setText(inputEditText.getText() + " kg");
+						sharedPreferences.edit().putFloat("myWeight", Float.parseFloat(inputEditText.getText().toString())).commit();
+						sharedPreferences.edit().putBoolean("hasWeight", true).commit();
+					}
+				}).setNegativeButton("Cancel", null).show();
+
+			}
+		});
 
 		txt_myTotalDistance = (TextView) findViewById(R.id.txt_myTotalDistance);
 		txt_myTotalDistance.setText(sharedPreferences.getString("myTotalDistance", "0") + " km");

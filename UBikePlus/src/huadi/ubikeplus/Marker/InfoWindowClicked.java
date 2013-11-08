@@ -59,7 +59,7 @@ public class InfoWindowClicked
 			e.printStackTrace();
 		}
 
-		new AlertDialog.Builder(context).setTitle("路徑規劃 , 將此點設為路徑終點?").setMessage("與此地距離 " + distanceMatrix.get(0) + "\n走路花費時間 約 " + distanceMatrix.get(1) + "\nYouBike會員花費 約 " + cost + " 元").setPositiveButton("確定", new DialogInterface.OnClickListener()
+		new AlertDialog.Builder(context).setTitle("路徑規劃 , 將此點設為路徑終點?").setMessage("與此地距離 " + distanceMatrix.get(0) + "\n走路花費時間 約 " + distanceMatrix.get(1) + "\n騎YouBike會員花費 約 " + cost + " 元").setPositiveButton("確定", new DialogInterface.OnClickListener()
 		{
 			@Override
 			public void onClick(DialogInterface dialog, int which)
