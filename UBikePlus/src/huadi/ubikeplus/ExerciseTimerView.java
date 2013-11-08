@@ -15,38 +15,47 @@ import android.view.View;
 
 public class ExerciseTimerView extends View
 {
-	Paint paint;
-	RectF oval;
+	private Paint paint;
+	private RectF oval;
 
-	float timeStrokeWidth = 30;
-	int textSize = 30;
+	private float timeStrokeWidth = 30;
+	private int textSize = 30;
 
-	float radius_hour, radius_minu, radius_sec;
-	float radius_alarmTimer;
+	private float radius_hour, radius_minu, radius_sec;
+	private float radius_alarmTimer;
+	private float radius_stop;
 
-	Handler timeHandler = new Handler();
-	int timePercentSecond = 0;
-	int alarmPercentSecond = 30 * 60 * 100; //30分鐘
+	private Handler timeHandler = new Handler();
+	private int timePercentSecond = 0;
+	private int alarmPercentSecond = 30 * 60 * 100; //30分鐘
+	private int stopPercentSecond = 3 * 100; //3秒
 
-	String speedString = "";
+	private String speedString = "";
 
-	boolean isTimerStart = false;
-	boolean isAlarmStart = false;
+	private boolean isTimerStart = false;
+	private boolean isAlarmStart = false;
+	private boolean isPause = false;
+	private boolean isStop = false;
+	private boolean isCount = false;
 
-	float degree_hour = 0;
-	float degree_minu = 0;
-	float degree_sec = 0;
-	float degree_alarm = 360;
+	private float degree_hour = 0;
+	private float degree_minu = 0;
+	private float degree_sec = 0;
+	private float degree_alarm = 360;
+	private float degree_stop = 0;
 
-	float timerCenter_x, timerCenter_y;
-	float alarmTimerCenter_x, alarmTimerCenter_y;
+	private float timerCenter_x, timerCenter_y;
+	private float alarmTimerCenter_x, alarmTimerCenter_y;
+	private float stopCenter_x, stopCenter_y;
 
-	Bitmap timerBitmap;
-	Bitmap alarmBitmap;
-	int bmpHalfWidth;
-	int bmpHalfHigh;
+	private Bitmap timerBitmap;
+	private Bitmap alarmBitmap;
+	private Bitmap stopBitmap;
 
-	MediaPlayer mediaPlayer;
+	private int bmpHalfWidth;
+	private int bmpHalfHigh;
+
+	private MediaPlayer mediaPlayer;
 
 	public ExerciseTimerView(Context context)
 	{
@@ -56,6 +65,7 @@ public class ExerciseTimerView extends View
 
 		timerBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_timer_start);
 		alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm);
+		stopBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm);
 
 		bmpHalfWidth = timerBitmap.getWidth() / 2;
 		bmpHalfHigh = timerBitmap.getHeight() / 2;
@@ -71,12 +81,15 @@ public class ExerciseTimerView extends View
 		{
 			if (isTimerStart) //碼表
 			{
-				degree_sec = (timePercentSecond * (360f / 60f / 100f)) % 360f;
-				degree_minu = (timePercentSecond * (360f / 3600f / 100f)) % 360f;
-				degree_hour = (timePercentSecond * (360f / 86400f / 100f)) % 360f;
+				if (!isPause)
+				{
+					degree_sec = (timePercentSecond * (360f / 60f / 100f)) % 360f;
+					degree_minu = (timePercentSecond * (360f / 3600f / 100f)) % 360f;
+					degree_hour = (timePercentSecond * (360f / 86400f / 100f)) % 360f;
 
-				invalidate();
-				timePercentSecond += 1;
+					invalidate();
+					timePercentSecond += 1;
+				}
 			}
 			if (isAlarmStart)
 			{
@@ -96,6 +109,25 @@ public class ExerciseTimerView extends View
 
 					alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm);
 				}
+			}
+
+			if (isCount)
+			{
+				degree_stop = (stopPercentSecond * (360f / 1f / 100f)) % 360f;
+				invalidate();
+
+				if (stopPercentSecond < 100)
+					stopPercentSecond += 1;
+				else
+					isStop = true;
+			}
+			else if (!isStop)
+			{
+				degree_stop = (stopPercentSecond * (360f / 3f / 100f)) % 360f;
+				invalidate();
+
+				if (stopPercentSecond > 0)
+					stopPercentSecond -= 5;
 			}
 
 			timeHandler.postDelayed(this, 10);
@@ -120,6 +152,11 @@ public class ExerciseTimerView extends View
 	public float GetTotalTimeSecond()
 	{
 		return timePercentSecond / 100f;
+	}
+
+	public boolean IsStop()
+	{
+		return isStop;
 	}
 
 	private void DrawTimer(Canvas canvas) //計時器
@@ -152,7 +189,7 @@ public class ExerciseTimerView extends View
 		canvas.drawArc(oval, 0, 360, false, paint); //順時針,3點方向為0
 
 		//秒
-		paint.setColor(Color.parseColor("#00eeee"));
+		paint.setColor(Color.parseColor("#3387e5"));
 		paint.setStrokeWidth(timeStrokeWidth);
 		paint.setAntiAlias(true);
 		paint.setStyle(Paint.Style.STROKE);
@@ -161,7 +198,7 @@ public class ExerciseTimerView extends View
 		canvas.drawArc(oval, -90, degree_sec, false, paint);
 
 		//分
-		paint.setColor(Color.parseColor("#00cccc"));
+		paint.setColor(Color.parseColor("#3359e5"));
 		paint.setStrokeWidth(timeStrokeWidth);
 		paint.setAntiAlias(true);
 		paint.setStyle(Paint.Style.STROKE);
@@ -170,7 +207,7 @@ public class ExerciseTimerView extends View
 		canvas.drawArc(oval, -90, degree_minu, false, paint);
 
 		//時
-		paint.setColor(Color.parseColor("#00aaaa"));
+		paint.setColor(Color.parseColor("#2b2bb0"));
 		paint.setStrokeWidth(timeStrokeWidth);
 		paint.setAntiAlias(true);
 		paint.setStyle(Paint.Style.STROKE);
@@ -200,16 +237,16 @@ public class ExerciseTimerView extends View
 
 	private void DrawAlertTimer(Canvas canvas)
 	{
-		//時
+		//背景
 		paint.setColor(Color.parseColor("#eeeeee"));
 		paint.setStrokeWidth(timeStrokeWidth);
 		paint.setAntiAlias(true);
 		paint.setStyle(Paint.Style.STROKE);
 
-		oval.set(alarmTimerCenter_x - radius_hour, alarmTimerCenter_y - radius_hour, alarmTimerCenter_x + radius_hour, alarmTimerCenter_y + radius_hour);
+		oval.set(alarmTimerCenter_x - radius_alarmTimer, alarmTimerCenter_y - radius_alarmTimer, alarmTimerCenter_x + radius_alarmTimer, alarmTimerCenter_y + radius_alarmTimer);
 		canvas.drawArc(oval, 0, 360, false, paint);
 
-		//時
+		//提醒
 		paint.setColor(Color.parseColor("#f5a257"));
 
 		canvas.drawArc(oval, -90, degree_alarm, false, paint); //順時針,3點方向為0
@@ -224,10 +261,39 @@ public class ExerciseTimerView extends View
 		paint.setColor(Color.BLACK);
 		paint.setTextSize(textSize);
 
+		//時間
 		String timeString = String.format("%02d:%02d", (int) (alarmPercentSecond / 100) / 60, (int) (alarmPercentSecond / 100) % 60);
 		canvas.drawText(timeString, alarmTimerCenter_x, alarmTimerCenter_y + radius_alarmTimer + timeStrokeWidth + textSize / 2, paint);
 
 		canvas.drawText("租車提醒", alarmTimerCenter_x, alarmTimerCenter_y - radius_alarmTimer - textSize / 2, paint);
+	}
+
+	private void DrawStopTimer(Canvas canvas)
+	{
+		//背景
+		paint.setColor(Color.parseColor("#eeeeee"));
+		paint.setStrokeWidth(timeStrokeWidth);
+		paint.setAntiAlias(true);
+		paint.setStyle(Paint.Style.STROKE);
+
+		oval.set(stopCenter_x - radius_stop, stopCenter_y - radius_stop, stopCenter_x + radius_stop, stopCenter_y + radius_stop);
+		canvas.drawArc(oval, 0, 360, false, paint);
+
+		//停止
+		paint.setColor(Color.parseColor("#e55151"));
+		canvas.drawArc(oval, -90, degree_stop, false, paint); //順時針,3點方向為0
+
+		//中間按鈕
+		canvas.drawBitmap(alarmBitmap, stopCenter_x - bmpHalfWidth, stopCenter_y - bmpHalfWidth, paint);
+
+		//字
+		paint.setTextAlign(Paint.Align.CENTER);
+		paint.setStrokeWidth(0);
+		paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+		paint.setColor(Color.BLACK);
+		paint.setTextSize(textSize / 2);
+
+		canvas.drawText("長按以停止", stopCenter_x, stopCenter_y - radius_alarmTimer - textSize / 2, paint);
 	}
 
 	@Override
@@ -246,7 +312,11 @@ public class ExerciseTimerView extends View
 		alarmTimerCenter_x = width * 0.75f;
 		alarmTimerCenter_y = height * 0.7f;
 
+		stopCenter_x = width * 0.25f;
+		stopCenter_y = height * 0.8f;
+
 		//timeStrokeWidth = timerCenter_x / 8;
+		radius_stop = bmpHalfWidth + timeStrokeWidth / 2;
 		radius_alarmTimer = bmpHalfWidth + timeStrokeWidth;
 		radius_hour = bmpHalfWidth + timeStrokeWidth;
 		radius_minu = radius_hour + timeStrokeWidth;
@@ -255,11 +325,15 @@ public class ExerciseTimerView extends View
 		DrawTimer(canvas);
 
 		DrawAlertTimer(canvas);
+
+		if (isPause)
+			DrawStopTimer(canvas);
 	}
 
 	private int touchX1, touchY1;
 	boolean isTimerBtnClick = false;
 	boolean isAlarmBtnClick = false;
+	boolean isStopBtnClick = false;
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event)
@@ -277,9 +351,15 @@ public class ExerciseTimerView extends View
 					isTimerBtnClick = true;
 
 					if (!isTimerStart)
+					{
+						isPause = false;
 						timerBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_timer_start_press);
+					}
 					else
+					{
+						isPause = true;
 						timerBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_timer_pause_press);
+					}
 				}
 				if (Math.abs(touchX1 - alarmTimerCenter_x) <= bmpHalfWidth && Math.abs(touchY1 - alarmTimerCenter_y) <= bmpHalfHigh)
 				{
@@ -289,6 +369,13 @@ public class ExerciseTimerView extends View
 						alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm_press);
 					else
 						alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm_disable_press);
+				}
+
+				if (isPause && Math.abs(touchX1 - stopCenter_x) <= bmpHalfWidth && Math.abs(touchY1 - stopCenter_y) <= bmpHalfHigh)
+				{
+					isStopBtnClick = true;
+					isCount = true;
+					stopBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm_disable_press);
 				}
 
 				invalidate();
@@ -329,6 +416,15 @@ public class ExerciseTimerView extends View
 					else
 						alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm_disable);
 				}
+
+				if (isStopBtnClick)
+				{
+					isStopBtnClick = false;
+					isCount = false;
+
+					stopBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm_disable);
+				}
+
 				invalidate();
 				break;
 		}

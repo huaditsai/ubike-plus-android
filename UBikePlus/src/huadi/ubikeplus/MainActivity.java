@@ -118,10 +118,12 @@ public class MainActivity extends Activity
 	private Handler udateHandler = new Handler();
 	private Runnable udateRunnable; //定時更新用
 
-	private boolean isStartExe = false;
+	private boolean isStartExe = false; //運動
+	private AlertDialog exeDialog; //秀運動視窗
+	private Handler exeHandler = new Handler(); //檢查是否停止用
 
-	ExerciseTimerView exerciseTimerView; //計時視窗
-	private float myTracesDistance = 0f;
+	private ExerciseTimerView exerciseTimerView; //計時視窗
+	private float myTracesDistance = 0f; //走過的總距離
 	private Polyline myTracesPolyline; //走過的痕跡
 	private List<LatLng> myTracesPoints; //走過的點
 
@@ -193,6 +195,7 @@ public class MainActivity extends Activity
 
 				map.setOnMarkerClickListener(new OnMarkerClickListener() //MarkerClick
 				{
+					@SuppressWarnings("unchecked")
 					@Override
 					public boolean onMarkerClick(Marker marker)
 					{
@@ -584,8 +587,12 @@ public class MainActivity extends Activity
 						else
 						{
 							if (!isStartExe)
+							{
+								isStartExe = true;
 								InitExercise();
-							FinishExercise();
+							}
+							//							InitExercise(); //TODO 測試
+							//							FinishExercise(); //測試
 						}
 						break;
 					case 4: //設定
@@ -616,10 +623,8 @@ public class MainActivity extends Activity
 		SharedPreferences settings = getSharedPreferences("Preference", 0);
 		weight = settings.getFloat("myWeight", 60f); //體重(pb)
 
-		//TODO
 		exerciseTimerView = new ExerciseTimerView(MainActivity.this);
 		exerciseTimerView.Start();
-		//view1.SetTimeText("23");
 
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		View layout = inflater.inflate(R.layout.exercise_start_view, null);
@@ -629,19 +634,38 @@ public class MainActivity extends Activity
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setView(layout).setCancelable(false).setPositiveButton("OK", null);
 
-		AlertDialog dialog = builder.create();
-		dialog.show();
+		exeDialog = builder.create();
+		exeDialog.show();
 
 		DisplayMetrics dm = new DisplayMetrics(); // 建立一個DisplayMetrics物件
 		getWindowManager().getDefaultDisplay().getMetrics(dm); // 取得裝置的資訊
 		int Width = dm.widthPixels;
-		int Height = dm.heightPixels;
+		//int Height = dm.heightPixels;
 
 		LayoutParams lp = (LayoutParams) linearLayout.getLayoutParams();
 		lp.width = (int) (Width * 0.8);
 		lp.height = (int) (Width * 0.9);
 		linearLayout.setLayoutParams(lp);
+
+		exeHandler.postDelayed(timerRun, 10);
 	}
+
+	private final Runnable timerRun = new Runnable() //運動計時
+	{
+		@Override
+		public void run()
+		{
+			if (exerciseTimerView.IsStop())
+			{
+				isStartExe = false;
+				exeDialog.dismiss();
+				exeHandler.removeCallbacks(timerRun);
+				FinishExercise();
+			}
+			else
+				exeHandler.postDelayed(timerRun, 100);
+		}
+	};
 
 	public void DoExercise() //於locationChange
 	{
@@ -652,16 +676,18 @@ public class MainActivity extends Activity
 				//speed = locationClient.getLastLocation().getSpeed() * 3.6f;// (currentDistance / currentTimeSec) * 3.6f; //時速
 				//大於30公分才紀錄
 				myTracesPoints.add(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude()));
+
+				myTracesDistance = 0;
+				float[] totalDistance = new float[1];
+				if (myTracesPoints.size() > 0)
+					myTracesPolyline.setPoints(myTracesPoints);
+				for (int i = 0; i < myTracesPoints.size() - 1; i++)
+				{
+					Location.distanceBetween(myTracesPoints.get(i).latitude, myTracesPoints.get(i).longitude, myTracesPoints.get(i + 1).latitude, myTracesPoints.get(i + 1).longitude, totalDistance);
+					myTracesDistance += totalDistance[0] / 1000;
+				}
 			}
 
-			myTracesDistance = 0;
-			float[] totalDistance = new float[1];
-			myTracesPolyline.setPoints(myTracesPoints);
-			for (int i = 0; i < myTracesPoints.size() - 1; i++)
-			{
-				Location.distanceBetween(myTracesPoints.get(i).latitude, myTracesPoints.get(i).longitude, myTracesPoints.get(i + 1).latitude, myTracesPoints.get(i + 1).longitude, totalDistance);
-				myTracesDistance += totalDistance[0] / 1000;
-			}
 		}
 	}
 
@@ -669,6 +695,8 @@ public class MainActivity extends Activity
 	{
 		//http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
 		float aveSpeed = (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 1.609344f; //(myTracesDistance / timerSec) * 0.00044704f; //mph
+		if (myTracesDistance == 0 || exerciseTimerView.GetTotalTimeSecond() == 0)
+			aveSpeed = 0;
 
 		float coefficient = 0;
 		if (0 < aveSpeed && aveSpeed <= 15)
@@ -699,7 +727,7 @@ public class MainActivity extends Activity
 		TextView txt_exercise_time = (TextView) layout.findViewById(R.id.txt_exercise_time);
 		TextView txt_exercise_speed = (TextView) layout.findViewById(R.id.txt_exercise_speed);
 		TextView txt_exercise_caloric = (TextView) layout.findViewById(R.id.txt_exercise_caloric);
-		
+
 		txt_exercise_distance.setText(myTracesDistance + " Km");
 		txt_exercise_time.setText(String.format("%02d:%02d:%02d", (int) exerciseTimerView.GetTotalTimeSecond() / 3600, (int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60, (int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
 		txt_exercise_speed.setText(String.format("%02.2f km/hr", (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 3.6f));

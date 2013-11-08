@@ -140,21 +140,22 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 			dialog.dismiss();
 		
 		SharedPreferences settings = context.getSharedPreferences("Preference", 0);
-		Calendar calendar = Calendar.getInstance();
-		int year = calendar.get(Calendar.YEAR); //民國
-		int month = calendar.get(Calendar.MONTH) + 1; //Calendar.MONTH 從0開始...
-		int day = calendar.get(Calendar.DATE);
-		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
-		settings.edit().putInt("UpdateTime", currentDateTime); //紀錄更新日期
 		
 		if (result != null)
 		{
 			Toast.makeText(context, "租車站點資料下載失敗 ", Toast.LENGTH_LONG).show();
 			if(isAddPoint)
-				settings.edit().putInt("UpdateTime", 0);
+				settings.edit().putInt("UpdateTime", 0).commit();
 		}
 		else
 		{
+			Calendar calendar = Calendar.getInstance();
+			int year = calendar.get(Calendar.YEAR); //民國
+			int month = calendar.get(Calendar.MONTH) + 1; //Calendar.MONTH 從0開始...
+			int day = calendar.get(Calendar.DATE);
+			int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
+			settings.edit().putInt("UpdateTime", currentDateTime).commit(); //紀錄更新日期
+			
 			//Toast.makeText(context, "更新成功", Toast.LENGTH_SHORT).show();
 			if(isAddPoint) //若是下載站點資訊才增加點
 			try
