@@ -9,28 +9,45 @@ import huadi.ubikeplus.Route.GeocoderTask;
 import huadi.ubikeplus.Route.GoogleDirectionTask;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.List;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -44,12 +61,30 @@ import android.view.animation.RotateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.SearchView.OnQueryTextListener;
+import android.widget.Toast;
 
+import com.facebook.FacebookException;
+import com.facebook.FacebookOperationCanceledException;
+import com.facebook.FacebookRequestError;
+import com.facebook.HttpMethod;
+import com.facebook.Request;
+import com.facebook.RequestAsyncTask;
+import com.facebook.Response;
+import com.facebook.Session;
+import com.facebook.android.AsyncFacebookRunner;
+import com.facebook.android.AsyncFacebookRunner.RequestListener;
+import com.facebook.android.DialogError;
+import com.facebook.android.Facebook;
+import com.facebook.android.Facebook.DialogListener;
+import com.facebook.android.FacebookError;
+import com.facebook.widget.WebDialog;
+import com.facebook.widget.WebDialog.OnCompleteListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
@@ -61,6 +96,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.OnCameraChangeListener;
 import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
+import com.google.android.gms.maps.GoogleMap.SnapshotReadyCallback;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -71,69 +107,77 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-public class MainActivity extends Activity
-{
+public class MainActivity extends Activity {
+	Facebook facebook;
+	SharedPreferences fbSpf;
+
 	private static final LatLng NTUE = new LatLng(25.024465, 121.544514);
 
 	private GoogleMap map;
-	private Runnable runnable; //慢慢把mark畫上
-	private List<Marker> allMarkers = new ArrayList<Marker>(); //所有點
-	ArrayList<BikeList> bikeLists = new ArrayList<BikeList>(); //站點列表
+	private Runnable runnable; // 慢慢把mark畫上
+	private List<Marker> allMarkers = new ArrayList<Marker>(); // 所有點
+	ArrayList<BikeList> bikeLists = new ArrayList<BikeList>(); // 站點列表
 
 	private ImageButton compass;
 	private float currentDegree;
 
-	private ImageButton myLocationButton; //自己的位置
+	private ImageButton myLocationButton; // 自己的位置
 	private LatLng myLocateLatLng;
 	private LocationClient locationClient;
 	private static final LocationRequest REQUEST = LocationRequest.create().setInterval(1000) // 1 seconds
 	.setFastestInterval(16) // 16ms = 60fps
 	.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-	//drawer
+	// drawer
 	private DrawerLayout drawerLayout;
 	private ListView drawerList;
-	private ImageButton drawerHomeButton; //按下開啟drawer
+	private ImageButton drawerHomeButton; // 按下開啟drawer
 
 	private SearchView searchView;
-	private Marker marker; //搜尋完, 或長按地圖時用
-	private Polyline directionPolyline; //導航用
-	private String directionPoint = ""; //目的地
-	private boolean isDrection = false; //是否導航	
+	private Marker marker; // 搜尋完, 或長按地圖時用
+	private Polyline directionPolyline; // 導航用
+	private String directionPoint = ""; // 目的地
+	private boolean isDrection = false; // 是否導航
 
-	private boolean isUpdateBikeTxt = false; //是否下載bike文件
+	private boolean isUpdateBikeTxt = false; // 是否下載bike文件
 	private static final String TXT_YOUBIKENAME = "_YouBikeStation.txt";
 	private static final String TXT_BIKEUPDATEINFO = "_BikeUpdateInfo.txt";
 	private File youBikeFile;
 	private File infoFile;
-	private String rootPath; //硬碟位置
+	private String rootPath; // 硬碟位置
 	private String serverPath = "http://120.127.14.60/Download/";
 
-	private boolean isAutoUpdate = false; //定時更新
-	private boolean isNearUpdate = false; //定時只更新附近
+	private boolean isAutoUpdate = false; // 定時更新
+	private boolean isNearUpdate = false; // 定時只更新附近
 	private Handler udateHandler = new Handler();
-	private Runnable udateRunnable; //定時更新用
+	private Runnable udateRunnable; // 定時更新用
 
-	private boolean isStartExe = false; //運動
-	private boolean isTimerStart = false; //計時開始
-	private AlertDialog exeDialog; //秀運動視窗
-	private boolean isMinimize = false; //最小化運動視窗
-	private Handler exeHandler = new Handler(); //檢查是否停止用
+	private boolean isStartExe = false; // 運動
+	private boolean isTimerStart = false; // 計時開始
+	private AlertDialog exeDialog; // 秀運動視窗
+	private boolean isMinimize = false; // 最小化運動視窗
+	private Handler exeHandler = new Handler(); // 檢查是否停止用
 
-	private ExerciseTimerView exerciseTimerView; //計時視窗
-	private float myTracesDistance = 0f; //走過的總距離(km)
-	private Polyline myTracesPolyline; //走過的痕跡
-	private List<LatLng> myTracesPoints; //走過的點
+	private ExerciseTimerView exerciseTimerView; // 計時視窗
+	private float myTracesDistance = 0f; // 走過的總距離(km)
+	private Polyline myTracesPolyline; // 走過的痕跡
+	private List<LatLng> myTracesPoints; // 走過的點
 
-	private float caloric = 0; //消耗熱量
-	private float weight = 0; //體重(pb)
+	private float caloric = 0; // 消耗熱量
+	private float weight = 0; // 體重(pb)
 
 	@Override
-	protected void onCreate(Bundle savedInstanceState)
-	{
+	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		//requestWindowFeature(Window.FEATURE_NO_TITLE); //fullScreen
+		// requestWindowFeature(Window.FEATURE_NO_TITLE); //fullScreen
 		setContentView(R.layout.activity_main);
+
+		StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+				.detectDiskReads().detectDiskWrites().detectNetwork()
+				.penaltyLog().build());
+		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+				.detectLeakedSqlLiteObjects().detectLeakedClosableObjects()
+				.penaltyLog().penaltyDeath().build());
 
 		rootPath = Environment.getExternalStorageDirectory() + "/UBikePlus/";
 
@@ -148,29 +192,28 @@ public class MainActivity extends Activity
 		SharedPreferences settings = getSharedPreferences("Preference", 0);
 
 		Calendar calendar = Calendar.getInstance();
-		int year = calendar.get(Calendar.YEAR); //民國
-		int month = calendar.get(Calendar.MONTH) + 1; //Calendar.MONTH 從0開始...
+		int year = calendar.get(Calendar.YEAR); // 民國
+		int month = calendar.get(Calendar.MONTH) + 1; // Calendar.MONTH 從0開始...
 		int day = calendar.get(Calendar.DATE);
-		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
-		//Log.e("123", "" + currentDateTime);		
-		if (settings.getInt("UpdateTime", 0) < currentDateTime) //該更新了
+		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d",
+				year, month, day));
+		// Log.e("123", "" + currentDateTime);
+		if (settings.getInt("UpdateTime", 0) < currentDateTime) // 該更新了
 			isUpdateBikeTxt = true;
 		else
 			isUpdateBikeTxt = false;
 
 	}
 
-	private void setUpMapIfNeeded()
-	{
-		if (map == null)
-		{
-			map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
-			if (map != null)
-			{
+	private void setUpMapIfNeeded() {
+		if (map == null) {
+			map = ((MapFragment) getFragmentManager()
+					.findFragmentById(R.id.map)).getMap();
+			if (map != null) {
 				map.animateCamera(CameraUpdateFactory.newLatLngZoom(NTUE, 16));
-				map.setMyLocationEnabled(true); //定位
+				map.setMyLocationEnabled(true); // 定位
 
-				//設定google map 本身的UI
+				// 設定google map 本身的UI
 				UiSettings uiSettings = map.getUiSettings();
 				uiSettings.setZoomControlsEnabled(false);
 				uiSettings.setCompassEnabled(false);
@@ -180,35 +223,36 @@ public class MainActivity extends Activity
 				SetMyLocationBtn();
 				SetSearchView();
 
-				//更新站點資料
-				if (!youBikeFile.exists() || isUpdateBikeTxt) //檔案不再 或 需要下載更新
-					new DownloadTask(MainActivity.this, map, TXT_YOUBIKENAME, true).execute(serverPath + TXT_YOUBIKENAME);
-				else
-				{
+				// 更新站點資料
+				if (!youBikeFile.exists() || isUpdateBikeTxt) // 檔案不再 或 需要下載更新
+					new DownloadTask(MainActivity.this, map, TXT_YOUBIKENAME,
+							true).execute(serverPath + TXT_YOUBIKENAME);
+				else {
 					InitMapItems(youBikeFile, false);
 				}
 
 				if (!infoFile.exists())
-					new DownloadTask(MainActivity.this, map, TXT_BIKEUPDATEINFO, true).execute(serverPath + TXT_BIKEUPDATEINFO);
+					new DownloadTask(MainActivity.this, map,
+							TXT_BIKEUPDATEINFO, true).execute(serverPath
+							+ TXT_BIKEUPDATEINFO);
 
-				map.setOnMarkerClickListener(new OnMarkerClickListener() //MarkerClick
+				map.setOnMarkerClickListener(new OnMarkerClickListener() // MarkerClick
 				{
 					@SuppressWarnings("unchecked")
 					@Override
-					public boolean onMarkerClick(Marker marker)
-					{
+					public boolean onMarkerClick(Marker marker) {
 						marker.hideInfoWindow();
-						map.setInfoWindowAdapter(new MyInfoWindowAdapter(MainActivity.this, marker.getTitle(), marker.getSnippet()));
+						map.setInfoWindowAdapter(new MyInfoWindowAdapter(
+								MainActivity.this, marker.getTitle(), marker
+										.getSnippet()));
 
-						try
-						{
+						try {
 							FileReader fr = new FileReader(youBikeFile);
 							final BufferedReader br = new BufferedReader(fr);
-							String line = br.readLine(); //readLine()讀取一整行
-							while (line != null)
-							{
-								if (marker.getTitle().equals(line.split(",")[3]))
-								{
+							String line = br.readLine(); // readLine()讀取一整行
+							while (line != null) {
+								if (marker.getTitle()
+										.equals(line.split(",")[3])) {
 									List<Marker> markers = new ArrayList<Marker>();
 									markers.add(marker);
 
@@ -218,8 +262,10 @@ public class MainActivity extends Activity
 									sno.add(line.split(",")[0]);
 									sarea.add(line.split(",")[4]);
 
-									//Log.e("marker.getTitle()", "" + sno + "," + sarea);
-									new RealTimeBikeTask(MainActivity.this, map, markers).execute(sno, sarea);
+									// Log.e("marker.getTitle()", "" + sno + ","
+									// + sarea);
+									new RealTimeBikeTask(MainActivity.this,
+											map, markers).execute(sno, sarea);
 									break;
 								}
 
@@ -227,9 +273,7 @@ public class MainActivity extends Activity
 							}
 							fr.close();
 							br.close();
-						}
-						catch (Exception e)
-						{
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
 
@@ -237,20 +281,30 @@ public class MainActivity extends Activity
 					}
 				});
 
-				directionPolyline = map.addPolyline(new PolylineOptions() //劃一條導航用的線
-				.width(10).color(Color.argb(120, 70, 50, 200)).geodesic(true));
+				directionPolyline = map.addPolyline(new PolylineOptions()
+						// 劃一條導航用的線
+						.width(10).color(Color.argb(120, 70, 50, 200))
+						.geodesic(true));
 
-				myTracesPolyline = map.addPolyline(new PolylineOptions() //走過的線
-				.width(10).color(Color.argb(150, 255, 85, 18)).geodesic(true));
+				myTracesPolyline = map.addPolyline(new PolylineOptions()
+						// 走過的線
+						.width(10).color(Color.argb(150, 255, 85, 18))
+						.geodesic(true));
 
-				map.setOnInfoWindowClickListener(new OnInfoWindowClickListener() //InfoWindowClick
+				map.setOnInfoWindowClickListener(new OnInfoWindowClickListener() // InfoWindowClick
 				{
 					@Override
-					public void onInfoWindowClick(final Marker marker)
-					{
-						String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
-						directionPoint = marker.getPosition().latitude + "," + marker.getPosition().longitude;
-						InfoWindowClicked infoWindowClicked = new InfoWindowClicked(MainActivity.this, map, directionPolyline, myLocationString);
+					public void onInfoWindowClick(final Marker marker) {
+						String myLocationString = locationClient
+								.getLastLocation().getLatitude()
+								+ ","
+								+ locationClient.getLastLocation()
+										.getLongitude();
+						directionPoint = marker.getPosition().latitude + ","
+								+ marker.getPosition().longitude;
+						InfoWindowClicked infoWindowClicked = new InfoWindowClicked(
+								MainActivity.this, map, directionPolyline,
+								myLocationString);
 						infoWindowClicked.ClickMarker(directionPoint);
 					}
 				});
@@ -260,85 +314,96 @@ public class MainActivity extends Activity
 
 	}
 
-	public void InitMapItems(File file, boolean isGetMarker)
-	{
+	public void InitMapItems(File file, boolean isGetMarker) {
 		map.clear();
 		allMarkers = new ArrayList<Marker>();
 
-		directionPolyline = map.addPolyline(new PolylineOptions() //劃一條導航用的線
-		.width(10).color(Color.argb(120, 70, 50, 200)).geodesic(true));
+		directionPolyline = map.addPolyline(new PolylineOptions() // 劃一條導航用的線
+				.width(10).color(Color.argb(120, 70, 50, 200)).geodesic(true));
 
-		myTracesPolyline = map.addPolyline(new PolylineOptions() //走過的線
-		.width(10).color(Color.argb(150, 255, 85, 18)).geodesic(true));
+		myTracesPolyline = map.addPolyline(new PolylineOptions() // 走過的線
+				.width(10).color(Color.argb(150, 255, 85, 18)).geodesic(true));
 
-		marker = map.addMarker(new MarkerOptions().position(NTUE).visible(false)); //searchView
+		marker = map.addMarker(new MarkerOptions().position(NTUE)
+				.visible(false)); // searchView
 
-		try
-		{
+		try {
 			final FileReader fr = new FileReader(file);
 			final BufferedReader br = new BufferedReader(fr);
 
-			if (isGetMarker)
-			{
+			if (isGetMarker) {
 				String line = br.readLine();
-				while (line != null)
-				{
+				while (line != null) {
 
-					Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+					Marker marker = map.addMarker(new MarkerOptions()
+							.position(
+									new LatLng(Double.parseDouble(line
+											.split(",")[1]), Double
+											.parseDouble(line.split(",")[2])))
+							.icon(BitmapDescriptorFactory
+									.fromResource(R.drawable.map_havebike))
+							.title(line.split(",")[3])
+							.snippet(line.split(",")[4]));// 0代號 3名稱 4位置 5區 6英區
+															// 7 英位址
 
-					allMarkers.add(marker); //新增到所有點中						
+					allMarkers.add(marker); // 新增到所有點中
 
 					line = br.readLine();
 				}
 				fr.close();
 				br.close();
-			}
-			else
-			{
+			} else {
 				final Handler handler = new Handler();
-				runnable = new Runnable()
-				{
+				runnable = new Runnable() {
 					@Override
-					public void run()
-					{
+					public void run() {
 						String line = "";
-						try
-						{
+						try {
 							line = br.readLine();
-							if (line != null)
-							{
-								//Log.e("br.readLine()", line);
+							if (line != null) {
+								// Log.e("br.readLine()", line);
 
-								Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 3名稱 4位置 5區 6英區 7 英位址
+								Marker marker = map
+										.addMarker(new MarkerOptions()
+												.position(
+														new LatLng(
+																Double.parseDouble(line
+																		.split(",")[1]),
+																Double.parseDouble(line
+																		.split(",")[2])))
+												.icon(BitmapDescriptorFactory
+														.fromResource(R.drawable.map_havebike))
+												.title(line.split(",")[3])
+												.snippet(line.split(",")[4]));// 0代號
+																				// 3名稱
+																				// 4位置
+																				// 5區
+																				// 6英區
+																				// 7
+																				// 英位址
 
-								allMarkers.add(marker); //新增到所有點中
-							}
-							else
-							{
+								allMarkers.add(marker); // 新增到所有點中
+							} else {
 								handler.removeCallbacks(runnable);
-								//fr.close();
-								//br.close();
+								// fr.close();
+								// br.close();
 							}
-						}
-						catch (Exception e)
-						{
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
 
 						handler.postDelayed(this, 10);
 					}
 				};
-				handler.postDelayed(runnable, 10);//每100ms執行一次runnable.
+				handler.postDelayed(runnable, 10);// 每100ms執行一次runnable.
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 	}
 
-	public void SetCompassBtn() //旋轉到地圖時才出現
+	public void SetCompassBtn() // 旋轉到地圖時才出現
 	{
 		DisplayMetrics dm = new DisplayMetrics();
 		this.getWindowManager().getDefaultDisplay().getMetrics(dm);
@@ -346,42 +411,44 @@ public class MainActivity extends Activity
 		compass = (ImageButton) findViewById(R.id.btn_compass);
 		compass.setVisibility(ImageButton.GONE);
 
-		map.setOnCameraChangeListener(new OnCameraChangeListener()
-		{
+		map.setOnCameraChangeListener(new OnCameraChangeListener() {
 			@Override
-			public void onCameraChange(CameraPosition cameraPosition)
-			{
-				if (cameraPosition.bearing != 0)
-				{
+			public void onCameraChange(CameraPosition cameraPosition) {
+				if (cameraPosition.bearing != 0) {
 					compass.setVisibility(ImageButton.VISIBLE);
 
-					RotateAnimation ra = new RotateAnimation(currentDegree, -cameraPosition.bearing, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+					RotateAnimation ra = new RotateAnimation(currentDegree,
+							-cameraPosition.bearing,
+							Animation.RELATIVE_TO_SELF, 0.5f,
+							Animation.RELATIVE_TO_SELF, 0.5f);
 					ra.setDuration(100);
 					ra.setFillAfter(true);
 					compass.startAnimation(ra);
 					currentDegree = -cameraPosition.bearing;
-				}
-				else
+				} else
 					compass.setVisibility(ImageButton.GONE);
 			}
 		});
-		compass.setOnClickListener(new OnClickListener() //轉正地圖
+		compass.setOnClickListener(new OnClickListener() // 轉正地圖
 		{
 			@Override
-			public void onClick(View v)
-			{
-				CameraPosition cameraPosition = new CameraPosition.Builder().target(map.getCameraPosition().target).bearing(0).tilt(map.getCameraPosition().tilt).zoom(map.getCameraPosition().zoom).build();
-				map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+			public void onClick(View v) {
+				CameraPosition cameraPosition = new CameraPosition.Builder()
+						.target(map.getCameraPosition().target).bearing(0)
+						.tilt(map.getCameraPosition().tilt)
+						.zoom(map.getCameraPosition().zoom).build();
+				map.animateCamera(CameraUpdateFactory
+						.newCameraPosition(cameraPosition));
 				compass.setVisibility(ImageButton.GONE);
 				compass.clearAnimation();
 			}
 		});
 	}
 
-	public void SetMyLocationBtn() //我的位置按鈕
+	public void SetMyLocationBtn() // 我的位置按鈕
 	{
 		myLocationButton = (ImageButton) findViewById(R.id.btn_myLocat);
-		myLocationButton.setOnTouchListener(new OnTouchListener()
+		myLocationButton.setOnTouchListener(new OnTouchListener() 
 		{
 			@Override
 			public boolean onTouch(View v, MotionEvent event)
@@ -420,23 +487,21 @@ public class MainActivity extends Activity
 		});
 	}
 
-	public void SetSearchView() //搜尋
+	public void SetSearchView() // 搜尋
 	{
-		marker = map.addMarker(new MarkerOptions().position(NTUE).visible(false));
+		marker = map.addMarker(new MarkerOptions().position(NTUE)
+				.visible(false));
 
 		searchView = (SearchView) findViewById(R.id.searchView1);
-		searchView.setOnQueryTextListener(new OnQueryTextListener()
-		{
+		searchView.setOnQueryTextListener(new OnQueryTextListener() {
 			@Override
-			public boolean onQueryTextChange(String query)
-			{
+			public boolean onQueryTextChange(String query) {
 				return false;
 			}
 
 			@Override
-			public boolean onQueryTextSubmit(String query)
-			{
-				//Log.e("query",query);
+			public boolean onQueryTextSubmit(String query) {
+				// Log.e("query",query);
 				marker.setVisible(false);
 				new GeocoderTask(MainActivity.this, map, marker).execute(query);
 				searchView.setQuery("", false);
@@ -446,19 +511,17 @@ public class MainActivity extends Activity
 		});
 	}
 
-	private void AutoUpdate() //定時自動更新站點
+	private void AutoUpdate() // 定時自動更新站點
 	{
-		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+		SharedPreferences settings = PreferenceManager
+				.getDefaultSharedPreferences(MainActivity.this);
 		isAutoUpdate = settings.getBoolean("isAutoUpdate", false);
 		isNearUpdate = settings.getBoolean("isNearUpdate", false);
 
-		if (isAutoUpdate)
-		{
-			udateRunnable = new Runnable()
-			{
+		if (isAutoUpdate) {
+			udateRunnable = new Runnable() {
 				@Override
-				public void run()
-				{
+				public void run() {
 					if (isNearUpdate)
 						UpdateBike(false, false);
 					else
@@ -467,34 +530,36 @@ public class MainActivity extends Activity
 					udateHandler.postDelayed(this, 60 * 1000);
 				}
 			};
-			udateHandler.postDelayed(udateRunnable, 60 * 1000);//每 1min
+			udateHandler.postDelayed(udateRunnable, 60 * 1000);// 每 1min
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	public void UpdateBike(boolean isAll, boolean isShowList) //更新站點資訊
+	public void UpdateBike(boolean isAll, boolean isShowList) // 更新站點資訊
 	{
 		InitMapItems(youBikeFile, true);
 
-		try
-		{
+		try {
 			FileReader fr = new FileReader(youBikeFile);
 			final BufferedReader br = new BufferedReader(fr);
 
-			String line = br.readLine(); //readLine()讀取一整行
+			String line = br.readLine(); // readLine()讀取一整行
 
 			List<Marker> markers = new ArrayList<Marker>();
-			List<String> snos = new ArrayList<String>(); //所有編號
-			List<String> sareas = new ArrayList<String>(); //所有地址
+			List<String> snos = new ArrayList<String>(); // 所有編號
+			List<String> sareas = new ArrayList<String>(); // 所有地址
 
 			int i = 0;
-			if (!isAll) //附近
-				while (line != null)
-				{
+			if (!isAll) // 附近
+				while (line != null) {
 					float[] distance = new float[1];
-					Location.distanceBetween(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude(), allMarkers.get(i).getPosition().latitude, allMarkers.get(i).getPosition().longitude, distance);
+					Location.distanceBetween(locationClient.getLastLocation()
+							.getLatitude(), locationClient.getLastLocation()
+							.getLongitude(),
+							allMarkers.get(i).getPosition().latitude,
+							allMarkers.get(i).getPosition().longitude, distance);
 
-					if (distance[0] <= 1000) //半徑1KM
+					if (distance[0] <= 1000) // 半徑1KM
 					{
 						markers.add(allMarkers.get(i));
 						snos.add(line.split(",")[0]);
@@ -505,9 +570,8 @@ public class MainActivity extends Activity
 					line = br.readLine();
 				}
 			else
-				//全部				
-				while (line != null)
-				{
+				// 全部
+				while (line != null) {
 					snos.add(line.split(",")[0]);
 					sareas.add(line.split(",")[4]);
 
@@ -517,89 +581,96 @@ public class MainActivity extends Activity
 			fr.close();
 			br.close();
 
-			String myLocationString = locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude();
-			if (!isAll && markers.size() > 0)
-			{
+			String myLocationString = locationClient.getLastLocation()
+					.getLatitude()
+					+ ","
+					+ locationClient.getLastLocation().getLongitude();
+			if (!isAll && markers.size() > 0) {
 				if (isShowList)
-					new RealTimeBikeTask(MainActivity.this, map, markers, directionPolyline, myLocationString).execute(snos, sareas);
+					new RealTimeBikeTask(MainActivity.this, map, markers,
+							directionPolyline, myLocationString).execute(snos,
+							sareas);
 				else
-					new RealTimeBikeTask(MainActivity.this, map, markers).execute(snos, sareas);
+					new RealTimeBikeTask(MainActivity.this, map, markers)
+							.execute(snos, sareas);
 			}
-			if (isAll && allMarkers.size() > 0)
-			{
+			if (isAll && allMarkers.size() > 0) {
 				if (isShowList)
-					new RealTimeBikeTask(MainActivity.this, map, allMarkers, directionPolyline, myLocationString).execute(snos, sareas);
+					new RealTimeBikeTask(MainActivity.this, map, allMarkers,
+							directionPolyline, myLocationString).execute(snos,
+							sareas);
 				else
-					new RealTimeBikeTask(MainActivity.this, map, allMarkers).execute(snos, sareas);
+					new RealTimeBikeTask(MainActivity.this, map, allMarkers)
+							.execute(snos, sareas);
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void SetDrawer()
-	{
+	public void SetDrawer() {
 		drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
 		drawerList = (ListView) findViewById(R.id.left_drawer);
 
-		drawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
+		drawerLayout.setDrawerShadow(R.drawable.drawer_shadow,
+				GravityCompat.START);
 
 		DrawerListMoedel.LoadModel();
 		String[] ids = new String[DrawerListMoedel.Items.size()];
 		for (int i = 0; i < ids.length; i++)
 			ids[i] = Integer.toString(i + 1);
-		DrawerItemAdapter adapter = new DrawerItemAdapter(this, R.layout.drawer_list_item, ids);
+		DrawerItemAdapter adapter = new DrawerItemAdapter(this,
+				R.layout.drawer_list_item, ids);
 		drawerList.setAdapter(adapter);
 
-		drawerList.setOnItemClickListener(new OnItemClickListener()
-		{
+		drawerList.setOnItemClickListener(new OnItemClickListener() {
 			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id)
-			{
-				switch (position)
-				{
-					case 0: //個人資訊
-						startActivity(new Intent(MainActivity.this, MyProfileActivity.class));
-						break;
-					case 1: //更新附近(1KM)
-						UpdateBike(false, true);
-						break;
-					case 2: //更新全部
-						UpdateBike(true, true);
-						break;
-					case 3: //運動計時
-						SharedPreferences settings = getSharedPreferences("Preference", 0);
-						if (!settings.getBoolean("hasWeight", false))
-						{
-							new AlertDialog.Builder(MainActivity.this).setTitle("運動計時").setMessage("計算消耗熱量需要您的體重, 前往設定?").setPositiveButton("設定", new DialogInterface.OnClickListener()
-							{
-								@Override
-								public void onClick(DialogInterface dialog, int which)
-								{
-									startActivity(new Intent(MainActivity.this, MyProfileActivity.class));
-								}
-							}).setNegativeButton("取消", null).show();
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				switch (position) {
+				case 0: // 個人資訊
+					startActivity(new Intent(MainActivity.this,
+							MyProfileActivity.class));
+					break;
+				case 1: // 更新附近(1KM)
+					UpdateBike(false, true);
+					break;
+				case 2: // 更新全部
+					UpdateBike(true, true);
+					break;
+				case 3: // 運動計時
+					SharedPreferences settings = getSharedPreferences(
+							"Preference", 0);
+					if (!settings.getBoolean("hasWeight", false)) {
+						new AlertDialog.Builder(MainActivity.this)
+								.setTitle("運動計時")
+								.setMessage("計算消耗熱量需要您的體重, 前往設定?")
+								.setPositiveButton("設定",
+										new DialogInterface.OnClickListener() {
+											@Override
+											public void onClick(
+													DialogInterface dialog,
+													int which) {
+												startActivity(new Intent(
+														MainActivity.this,
+														MyProfileActivity.class));
+											}
+										}).setNegativeButton("取消", null).show();
+					} else {
+						if (!isStartExe) {
+							isStartExe = true;
+							InitExercise();
+						} else if (isMinimize) {
+							exeDialog.show();
 						}
-						else
-						{
-							if (!isStartExe)
-							{
-								isStartExe = true;
-								InitExercise();
-							}
-							else if(isMinimize)
-							{
-								exeDialog.show();
-							}
-						}
-						break;
-					case 4: //設定
-						startActivity(new Intent(MainActivity.this, SettingActivity.class));
-						break;
-					default:
-						break;
+					}
+					break;
+				case 4: // 設定
+					startActivity(new Intent(MainActivity.this,
+							SettingActivity.class));
+					break;
+				default:
+					break;
 				}
 				drawerLayout.closeDrawer(drawerList);
 			}
@@ -608,39 +679,39 @@ public class MainActivity extends Activity
 		getActionBar().hide();
 
 		drawerHomeButton = (ImageButton) findViewById(R.id.drawerHomeButton);
-		drawerHomeButton.setOnClickListener(new OnClickListener()
-		{
+		drawerHomeButton.setOnClickListener(new OnClickListener() {
 			@Override
-			public void onClick(View v)
-			{
+			public void onClick(View v) {
 				drawerLayout.openDrawer(Gravity.LEFT);
 			}
 		});
 	}
 
-	public void InitExercise() //運動
+	public void InitExercise() // 運動
 	{
 		SharedPreferences settings = getSharedPreferences("Preference", 0);
-		weight = settings.getFloat("myWeight", 60f); //體重(pb)
+		weight = settings.getFloat("myWeight", 60f); // 體重(pb)
 
 		exerciseTimerView = new ExerciseTimerView(MainActivity.this);
 		exerciseTimerView.Start();
 
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		View layout = inflater.inflate(R.layout.exercise_start_view, null);
-		LinearLayout linearLayout = (LinearLayout) layout.findViewById(R.id.lilayout_exercise_start);
+		LinearLayout linearLayout = (LinearLayout) layout
+				.findViewById(R.id.lilayout_exercise_start);
 		linearLayout.addView(exerciseTimerView);
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setView(layout).setCancelable(false).setPositiveButton("最小化", new DialogInterface.OnClickListener()
-		{			
-			@Override
-			public void onClick(DialogInterface dialog, int which)
-			{
-				// TODO 自動產生的方法 Stub			
-				isMinimize = true;
-			}
-		});
+		builder.setView(layout)
+				.setCancelable(false)
+				.setPositiveButton("最小化",
+						new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialog,
+									int which) {
+								isMinimize = true;
+							}
+						});
 
 		exeDialog = builder.create();
 		exeDialog.show();
@@ -648,7 +719,7 @@ public class MainActivity extends Activity
 		DisplayMetrics dm = new DisplayMetrics(); // 建立一個DisplayMetrics物件
 		getWindowManager().getDefaultDisplay().getMetrics(dm); // 取得裝置的資訊
 		int Width = dm.widthPixels;
-		//int Height = dm.heightPixels;
+		// int Height = dm.heightPixels;
 
 		LayoutParams lp = (LayoutParams) linearLayout.getLayoutParams();
 		lp.width = (int) (Width * 0.8);
@@ -658,42 +729,42 @@ public class MainActivity extends Activity
 		exeHandler.postDelayed(timerRun, 10);
 	}
 
-	private final Runnable timerRun = new Runnable() //檢查運動狀態
+	private final Runnable timerRun = new Runnable() // 檢查運動狀態
 	{
 		@Override
-		public void run()
-		{
-			if (exerciseTimerView.IsStop())
-			{
+		public void run() {
+			if (exerciseTimerView.IsStop()) {
 				isStartExe = false;
 				exeDialog.dismiss();
 				exeHandler.removeCallbacks(timerRun);
 				FinishExercise();
-			}
-			else
-			{
+			} else {
 				isTimerStart = exerciseTimerView.IsTimerStart();
 				exeHandler.postDelayed(timerRun, 100);
 			}
 		}
 	};
 
-	public void DoExercise() //於locationChange
+	public void DoExercise() // 於locationChange
 	{
-		if (isStartExe && locationClient.getLastLocation() != null && locationClient.isConnected())
-		{
-			if (isTimerStart && locationClient.getLastLocation().hasSpeed())
-			{
-				//speed = locationClient.getLastLocation().getSpeed() * 3.6f;// (currentDistance / currentTimeSec) * 3.6f; //時速
-				myTracesPoints.add(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude()));
+		if (isStartExe && locationClient.getLastLocation() != null
+				&& locationClient.isConnected()) {
+			if (isTimerStart && locationClient.getLastLocation().hasSpeed()) {
+				// speed = locationClient.getLastLocation().getSpeed() * 3.6f;//
+				// (currentDistance / currentTimeSec) * 3.6f; //時速
+				myTracesPoints.add(new LatLng(locationClient.getLastLocation()
+						.getLatitude(), locationClient.getLastLocation()
+						.getLongitude()));
 
 				myTracesDistance = 0;
 				float[] totalDistance = new float[1];
 				if (myTracesPoints.size() > 0)
 					myTracesPolyline.setPoints(myTracesPoints);
-				for (int i = 0; i < myTracesPoints.size() - 1; i++)
-				{
-					Location.distanceBetween(myTracesPoints.get(i).latitude, myTracesPoints.get(i).longitude, myTracesPoints.get(i + 1).latitude, myTracesPoints.get(i + 1).longitude, totalDistance);
+				for (int i = 0; i < myTracesPoints.size() - 1; i++) {
+					Location.distanceBetween(myTracesPoints.get(i).latitude,
+							myTracesPoints.get(i).longitude,
+							myTracesPoints.get(i + 1).latitude,
+							myTracesPoints.get(i + 1).longitude, totalDistance);
 					myTracesDistance += totalDistance[0] / 1000;
 				}
 			}
@@ -701,12 +772,14 @@ public class MainActivity extends Activity
 		}
 	}
 
-	private void FinishExercise() //結束運動
+	private void FinishExercise() // 結束運動
 	{
-		//http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
-		float aveSpeed = myTracesDistance / (exerciseTimerView.GetTotalTimeSecond() / 3600f); //km/hr
-		float aveSpeed_mph = aveSpeed * 0.621371192f; //mph
-		if (myTracesDistance == 0 || exerciseTimerView.GetTotalTimeSecond() == 0)
+		// http://www.infinitnutrition.us/library/Calculating%20Cycling%20Calories.pdf
+		float aveSpeed = myTracesDistance
+				/ (exerciseTimerView.GetTotalTimeSecond() / 3600f); // km/hr
+		float aveSpeed_mph = aveSpeed * 0.621371192f; // mph
+		if (myTracesDistance == 0
+				|| exerciseTimerView.GetTotalTimeSecond() == 0)
 			aveSpeed = 0;
 
 		float coefficient = 0;
@@ -729,67 +802,256 @@ public class MainActivity extends Activity
 		else if (23 < aveSpeed_mph && aveSpeed_mph <= 25)
 			coefficient = 0.14f;
 
-		caloric = (float) ((coefficient * (weight * 2.204623f) * (exerciseTimerView.GetTotalTimeSecond() / 60) + locationClient.getLastLocation().getAltitude() / (100 * 0.3048f)) * 0.4f); //min*0.3, max*0.5
+		caloric = (float) ((coefficient * (weight * 2.204623f)
+				* (exerciseTimerView.GetTotalTimeSecond() / 60) + locationClient
+				.getLastLocation().getAltitude() / (100 * 0.3048f)) * 0.4f); // min*0.3,
+																				// max*0.5
 
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		View layout = inflater.inflate(R.layout.exercise_finish_view, null);
 
-		TextView txt_exercise_distance = (TextView) layout.findViewById(R.id.txt_exercise_distance);
-		TextView txt_exercise_time = (TextView) layout.findViewById(R.id.txt_exercise_time);
-		TextView txt_exercise_speed = (TextView) layout.findViewById(R.id.txt_exercise_speed);
-		TextView txt_exercise_caloric = (TextView) layout.findViewById(R.id.txt_exercise_caloric);
+		TextView txt_exercise_distance = (TextView) layout
+				.findViewById(R.id.txt_exercise_distance);
+		TextView txt_exercise_time = (TextView) layout
+				.findViewById(R.id.txt_exercise_time);
+		TextView txt_exercise_speed = (TextView) layout
+				.findViewById(R.id.txt_exercise_speed);
+		TextView txt_exercise_caloric = (TextView) layout
+				.findViewById(R.id.txt_exercise_caloric);
 
-		txt_exercise_distance.setText(String.format("%.2f Km", myTracesDistance));
-		txt_exercise_time.setText(String.format("%02d:%02d:%02d", (int) exerciseTimerView.GetTotalTimeSecond() / 3600, (int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60, (int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
+		txt_exercise_distance.setText(String
+				.format("%.2f Km", myTracesDistance));
+		txt_exercise_time.setText(String.format("%02d:%02d:%02d",
+				(int) exerciseTimerView.GetTotalTimeSecond() / 3600,
+				(int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60,
+				(int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
 		txt_exercise_speed.setText(String.format("%.1f km/hr", aveSpeed));
 		txt_exercise_caloric.setText(caloric + " caloric");
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setView(layout).setCancelable(false).setPositiveButton("OK", null);
+		builder.setView(layout).setCancelable(false)
+				.setPositiveButton("OK", null);
+		builder.setView(layout).setNegativeButton("分享至Facebook",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						FBPost();
+					}
+				});
 
 		AlertDialog dialog = builder.create();
 		dialog.show();
 	}
 
-	private void setUpLocationClientIfNeeded()
-	{
-		if (locationClient == null)
-		{
-			locationClient = new LocationClient(getApplicationContext(), new ConnectionCallbacks()
-			{
-				@Override
-				public void onDisconnected()
-				{
-				}
+	// facebook start
+	@SuppressWarnings("deprecation")
+	public void FBPost() {
+		fbSpf = getSharedPreferences("FaceBook", MODE_PRIVATE); // 偏好設定
+		facebook = new Facebook(fbSpf.getString("fbAppID", getResources()
+				.getString(R.string.app_id)));
 
+		String access_token = fbSpf.getString("access_token", null);
+		long expires = fbSpf.getLong("access_expires", -1);
+
+		if (access_token != null) {
+			facebook.setAccessToken(access_token);
+		}
+		if (expires != 0) {
+			facebook.setAccessExpires(expires);
+		}
+		if (!facebook.isSessionValid()) {
+			// not login
+			FbLogin();
+		} else {
+			
+			CaptureMapScreen();
+			//TODO 把圖抓進來
+            Bitmap bmp = null;
+			ByteArrayOutputStream stream = new ByteArrayOutputStream();
+			bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+			byte[] bitmapdata = stream.toByteArray();
+
+			Bundle params = new Bundle();
+			try {
+				float aveSpeed = myTracesDistance
+						/ (exerciseTimerView.GetTotalTimeSecond() / 3600f); // km/hr
+
+				params.putString("method", "photos.upload");
+				params.putByteArray("picture", bitmapdata);
+				params.putString(
+						"caption",
+						"今天以平均時速" + String.format("%.1f km/hr", aveSpeed)
+								+ "騎了UBike"
+								+ String.format("%.2f公里", myTracesDistance)
+								+ "總共消耗熱量" + caloric + "卡路里");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			AsyncFacebookRunner mAsyncRunner = new AsyncFacebookRunner(facebook);
+			mAsyncRunner.request(null, params, "POST",
+					new SampleUploadListener(), null);
+		}
+	}
+
+	// Bundle params = new Bundle();
+	// params.putString("access_token", access_token);
+	// params.putString("message", "msg");
+	// params.putString("name", "title");
+	// params.putString("caption", "1");
+	// params.putString("description", "2");
+	// params.putString("link", "http://www.ntue.edu.tw/");
+	// params.putString("picture",
+	// "http://www2.ntue.edu.tw/gridfs/5227e7479ba4c21971000001/logo.png");
+	//
+	// AsyncFacebookRunner mAsyncRunner = new AsyncFacebookRunner(facebook);
+	// mAsyncRunner.request("me/feed", params, "POST", new RequestListener(){
+	//
+	// @Override
+	// public void onComplete(String response, Object state) {
+	// showToast("finish");
+	// }
+	//
+	// @Override
+	// public void onIOException(IOException e, Object state) {}
+	//
+	// @Override
+	// public void onFileNotFoundException(FileNotFoundException e,
+	// Object state) {}
+	//
+	// @Override
+	// public void onMalformedURLException(MalformedURLException e,
+	// Object state) {}
+	//
+	// @Override
+	// public void onFacebookError(FacebookError e, Object state) {}}, null);
+	// }
+	// }
+
+	@SuppressWarnings("deprecation")
+	private void FbLogin() {
+		// Log.e("fbLogin", "0");
+		facebook.authorize(this, new String[] { "user_about_me",
+				"publish_stream", "read_stream", "user_photos" },
+				Facebook.FORCE_DIALOG_AUTH, new DialogListener() {
+					@Override
+					public void onComplete(Bundle values) {
+						try {
+							String token = facebook.getAccessToken();
+							long token_expires = facebook.getAccessExpires();
+							String about_me = facebook.request("me"); // json
+																		// string
+
+							JSONObject jb1 = new JSONObject(about_me);
+							String id = jb1.getString("id");
+							String name = jb1.getString("name");
+
+							SharedPreferences.Editor editor = fbSpf.edit();
+							editor.putLong("access_expires", token_expires);
+							editor.putString("access_token", token);
+							editor.putString("fbid", id);
+							editor.putString("fbname", name);
+							if (fbSpf.getString("join", "").length() < 0)
+								editor.putString("join", "true");
+							editor.commit();
+							Toast.makeText(MainActivity.this,
+									name + "已登入Facebook", Toast.LENGTH_SHORT)
+									.show();
+
+							FBPost();
+						} catch (MalformedURLException e) {
+						} catch (IOException e) {
+						} catch (JSONException e) {
+						}
+					}
+
+					@Override
+					public void onFacebookError(FacebookError e) {
+					}
+
+					@Override
+					public void onError(DialogError e) {
+					}
+
+					@Override
+					public void onCancel() {
+					}
+				});
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		facebook.authorizeCallback(requestCode, resultCode, data);
+	}
+
+	private Handler mHandler = new Handler();
+
+	public void showToast(final String msg) {
+		mHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				Toast toast = Toast.makeText(MainActivity.this, msg,
+						Toast.LENGTH_LONG);
+				toast.show();
+			}
+		});
+	}
+
+	public void CaptureMapScreen() {
+		//TODO 沒截到
+		SnapshotReadyCallback callback = new SnapshotReadyCallback() {
+			Bitmap bitmap = null;
+			
+			@Override
+			public void onSnapshotReady(Bitmap snapshot) {
+				// TODO Auto-generated method stub
+				bitmap = snapshot;
+				try {
+					FileOutputStream out = new FileOutputStream("/mnt/sdcard/"
+                        + "MyMapScreen" + System.currentTimeMillis()
+                        + ".png");
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+			}
+		};
+
+		map.snapshot(callback);
+	}
+
+	// facebook end
+
+	private void setUpLocationClientIfNeeded() {
+		if (locationClient == null) {
+			locationClient = new LocationClient(getApplicationContext(), new ConnectionCallbacks() {
 				@Override
-				public void onConnected(Bundle arg0)
-				{
-					locationClient.requestLocationUpdates(REQUEST, new LocationListener()
-					{
+				public void onDisconnected() {}
+				@Override
+				public void onConnected(Bundle arg0) {
+					locationClient.requestLocationUpdates(REQUEST, new LocationListener() {
 						@Override
-						public void onLocationChanged(Location location)
-						{
-							if (isDrection) //更新位置後要以自己位置重畫線
-								new GoogleDirectionTask(map, directionPolyline).execute(locationClient.getLastLocation().getLatitude() + "," + locationClient.getLastLocation().getLongitude(), directionPoint);
-
-							DoExercise();
+						public void onLocationChanged(Location location) {
+							if (isDrection) // 更新位置後要以自己位置重畫線
+								new GoogleDirectionTask(map, directionPolyline)
+									.execute(locationClient.getLastLocation().getLatitude()
+											+ ","+ locationClient.getLastLocation().getLongitude(),directionPoint);
+											DoExercise();
+										}
+									});
+						}
+					}, new OnConnectionFailedListener() {
+						@Override
+						public void onConnectionFailed(ConnectionResult arg0) {
 						}
 					});
-				}
-			}, new OnConnectionFailedListener()
-			{
-				@Override
-				public void onConnectionFailed(ConnectionResult arg0)
-				{
-				}
-			});
 		}
 	}
 
 	@Override
-	protected void onResume()
-	{
+	protected void onResume() {
 		super.onResume();
 		setUpMapIfNeeded();
 		setUpLocationClientIfNeeded();
@@ -798,22 +1060,19 @@ public class MainActivity extends Activity
 	}
 
 	@Override
-	public void onPause()
-	{
+	public void onPause() {
 		super.onPause();
-		if (locationClient != null && !isStartExe)
-		{
+		if (locationClient != null && !isStartExe) {
 			locationClient.disconnect();
 		}
 		udateHandler.removeCallbacks(udateRunnable);
 	}
 
 	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event)
-	{
-		if (keyCode == KeyEvent.KEYCODE_BACK) //縮小APP instead pause
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if (keyCode == KeyEvent.KEYCODE_BACK) // 縮小APP instead pause
 		{
-			moveTaskToBack(true); //背景執行
+			moveTaskToBack(true); // 背景執行
 			return true;
 		}
 		return super.onKeyDown(keyCode, event);
