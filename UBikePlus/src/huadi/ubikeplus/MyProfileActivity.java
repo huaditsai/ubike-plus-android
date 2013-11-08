@@ -22,6 +22,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.NavUtils;
+import android.text.InputType;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MenuItem;
@@ -139,21 +140,22 @@ public class MyProfileActivity extends Activity
 				{
 					final EditText inputEditText = new EditText(MyProfileActivity.this);
 					inputEditText.setSingleLine();
+					inputEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
 
 					new AlertDialog.Builder(MyProfileActivity.this).setTitle("請輸入體重 (公斤)").setView(inputEditText).setPositiveButton("Ok", new DialogInterface.OnClickListener()
 					{
 						public void onClick(DialogInterface dialog, int whichButton)
 						{
-							txt_myWeight.setText(inputEditText.getText());
-							sharedPreferences.edit().putString("myWeight", inputEditText.getText().toString()).commit();
-							sharedPreferences.edit().putBoolean("hasWeight", true);
+							txt_myWeight.setText(inputEditText.getText() + " kg");
+							sharedPreferences.edit().putFloat("myWeight", Float.parseFloat(inputEditText.getText().toString())).commit();
+							sharedPreferences.edit().putBoolean("hasWeight", true).commit();
 						}
 					}).setNegativeButton("Cancel", null).show();
 				}
 			});
 		}
 		else
-			txt_myWeight.setText(sharedPreferences.getString("myWeight", "60") + " kg");
+			txt_myWeight.setText(sharedPreferences.getFloat("myWeight", 60f) + " kg");
 
 		txt_myTotalDistance = (TextView) findViewById(R.id.txt_myTotalDistance);
 		txt_myTotalDistance.setText(sharedPreferences.getString("myTotalDistance", "0") + " km");

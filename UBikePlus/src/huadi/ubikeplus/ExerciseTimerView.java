@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.media.MediaPlayer;
 import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
@@ -45,6 +46,8 @@ public class ExerciseTimerView extends View
 	int bmpHalfWidth;
 	int bmpHalfHigh;
 
+	MediaPlayer mediaPlayer;
+
 	public ExerciseTimerView(Context context)
 	{
 		super(context);
@@ -56,6 +59,10 @@ public class ExerciseTimerView extends View
 
 		bmpHalfWidth = timerBitmap.getWidth() / 2;
 		bmpHalfHigh = timerBitmap.getHeight() / 2;
+
+		if (mediaPlayer != null)
+			mediaPlayer.release();
+		mediaPlayer = MediaPlayer.create(context, R.raw.bell);
 	}
 
 	private final Runnable timerRun = new Runnable() //運動計時
@@ -74,11 +81,21 @@ public class ExerciseTimerView extends View
 			if (isAlarmStart)
 			{
 				degree_alarm = (alarmPercentSecond * (360f / 1800f / 100f)) % 360f;
-				
+
 				invalidate();
-				
+
 				if (alarmPercentSecond > 0)
 					alarmPercentSecond -= 1;
+				else
+				{
+					mediaPlayer.start();
+					isAlarmStart = false;
+
+					alarmPercentSecond = 30 * 60 * 100; //30分鐘
+					degree_alarm = 360;
+
+					alarmBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.exercise_alarm);
+				}
 			}
 
 			timeHandler.postDelayed(this, 10);
@@ -199,7 +216,7 @@ public class ExerciseTimerView extends View
 
 		//中間按鈕
 		canvas.drawBitmap(alarmBitmap, alarmTimerCenter_x - bmpHalfWidth, alarmTimerCenter_y - bmpHalfWidth, paint);
-		
+
 		//字
 		paint.setTextAlign(Paint.Align.CENTER);
 		paint.setStrokeWidth(0);
@@ -209,7 +226,7 @@ public class ExerciseTimerView extends View
 
 		String timeString = String.format("%02d:%02d", (int) (alarmPercentSecond / 100) / 60, (int) (alarmPercentSecond / 100) % 60);
 		canvas.drawText(timeString, alarmTimerCenter_x, alarmTimerCenter_y + radius_alarmTimer + timeStrokeWidth + textSize / 2, paint);
-		
+
 		canvas.drawText("租車提醒", alarmTimerCenter_x, alarmTimerCenter_y - radius_alarmTimer - textSize / 2, paint);
 	}
 
