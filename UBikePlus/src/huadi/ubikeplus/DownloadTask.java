@@ -32,7 +32,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 
 	Runnable runnable;
 	ProgressDialog dialog;
-	
+
 	String rootPath;
 
 	public DownloadTask(Context context, GoogleMap map, String fileName, boolean isAddPoint)
@@ -47,7 +47,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 
 	@Override
 	protected String doInBackground(String... sUrl)
-	{		
+	{
 		try
 		{
 			InputStream input = null;
@@ -71,7 +71,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 				// download the file
 				input = connection.getInputStream();
 				File folder = new File(Environment.getExternalStorageDirectory(), "/UBikePlus");
-				if(!folder.exists())
+				if (!folder.exists())
 					folder.mkdir();
 				String filePath = rootPath + fileName;
 				File file = new File(filePath);
@@ -81,7 +81,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 				long total = 0;
 				int count;
 				while ((count = input.read(data)) != -1)
-				{					
+				{
 					total += count;
 					// publishing the progress....
 					if (fileLength > 0) // only if total length is known
@@ -138,13 +138,13 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 	{
 		if (dialog.isShowing())
 			dialog.dismiss();
-		
+
 		SharedPreferences settings = context.getSharedPreferences("Preference", 0);
-		
+
 		if (result != null)
 		{
 			Toast.makeText(context, "租車站點資料下載失敗 ", Toast.LENGTH_LONG).show();
-			if(isAddPoint)
+			if (isAddPoint)
 				settings.edit().putInt("UpdateTime", 0).commit();
 		}
 		else
@@ -155,57 +155,55 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 			int day = calendar.get(Calendar.DATE);
 			int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
 			settings.edit().putInt("UpdateTime", currentDateTime).commit(); //紀錄更新日期
-			
+
 			//Toast.makeText(context, "更新成功", Toast.LENGTH_SHORT).show();
-			if(isAddPoint) //若是下載站點資訊才增加點
-			try
+			if (isAddPoint) //若是下載站點資訊才增加點
 			{
-				String filePath = rootPath + fileName;
-				final File file = new File(filePath);
-				final FileReader fr = new FileReader(file);						
-				final BufferedReader br = new BufferedReader(fr);
-				
-				final Handler handler = new Handler();
-				runnable = new Runnable()
+				try
 				{
-					@Override
-					public void run()
+					String filePath = rootPath + fileName;
+					final File file = new File(filePath);
+					final FileReader fr = new FileReader(file);
+					final BufferedReader br = new BufferedReader(fr);
+
+					final Handler handler = new Handler();
+					runnable = new Runnable()
 					{
-						String line = "";
-						try
+						@Override
+						public void run()
 						{
-							if ((line = br.readLine()) != null)
+							try
 							{
-								if(!line.split(",")[0].equals("0000")) //跟0001合併了
+								String line = br.readLine();
+								if (line != null)
 								{
-									map.addMarker(new MarkerOptions()
-									.position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2])))
-									.icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike))
-									.title(line.split(",")[3])
-									.snippet(line.split(",")[4]));//0代號 5區 6英區 7 英位址
+
+									map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));//0代號 5區 6英區 7 英位址
+
+								}
+								else
+								{
+									handler.removeCallbacks(runnable);
+									//								fr.close();
+									//								br.close();
 								}
 							}
-							else
+							catch (Exception e)
 							{
-								handler.removeCallbacks(runnable);
-//								fr.close();
-//								br.close();
+								e.printStackTrace();
 							}
-						}
-						catch (Exception e)
-						{
-							e.printStackTrace();
-						}
 
-						handler.postDelayed(this, 10);
-					}
-				};
-				handler.postDelayed(runnable, 10);
+							handler.postDelayed(this, 10);
+						}
+					};
+					handler.postDelayed(runnable, 10);
+				}
+				catch (Exception e)
+				{
+					e.printStackTrace();
+				}
 			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
+			
 		}
 	}
 }

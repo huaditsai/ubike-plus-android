@@ -1,7 +1,16 @@
 package huadi.ubikeplus;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -11,8 +20,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff.Mode;
@@ -20,6 +29,8 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.v4.app.NavUtils;
 import android.text.InputType;
@@ -34,8 +45,20 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.android.DialogError;
+import com.facebook.android.Facebook;
+import com.facebook.android.Facebook.DialogListener;
+import com.facebook.android.FacebookError;
+
 public class MyProfileActivity extends Activity
 {
+	Facebook facebook;
+	SharedPreferences fbSpf;
+	static String filefolderName;
+	static String filePathRoot;
+
+	boolean isFB = false;
+
 	SharedPreferences sharedPreferences;
 	ImageView img_myPic;
 	TextView txt_myName;
@@ -46,6 +69,7 @@ public class MyProfileActivity extends Activity
 	TextView txt_myAvgSpeed;
 	TextView txt_myMonthDistance;
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -53,6 +77,15 @@ public class MyProfileActivity extends Activity
 		setContentView(R.layout.activity_myprofile);
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setBackgroundDrawable(getResources().getDrawable(R.drawable.actionbar_bg));
+
+		StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build());
+		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectLeakedSqlLiteObjects().detectLeakedClosableObjects().penaltyLog().penaltyDeath().build());
+
+		fbSpf = getSharedPreferences("FaceBook", MODE_PRIVATE); //偏好設定 
+		facebook = new Facebook(fbSpf.getString("fbAppID", getResources().getString(R.string.app_id)));
+
+		filefolderName = "UBikePlus";
+		filePathRoot = Environment.getExternalStorageDirectory() + "/" + filefolderName + "/";
 
 		sharedPreferences = getSharedPreferences("Preference", 0);
 
@@ -94,6 +127,8 @@ public class MyProfileActivity extends Activity
 								startActivityForResult(destIntent, 0); // 切換到檔案選擇器 (它的處理結果, 觸發 onActivityResult 事件)
 								break;
 							case 1:
+								isFB = true;
+								FbLogin();
 								break;
 
 							default:
@@ -106,8 +141,7 @@ public class MyProfileActivity extends Activity
 		});
 
 		Uri imgUri = Uri.parse(sharedPreferences.getString("ImgUri", "android.resource://huadi.ubikeplus/drawable/facebook_profile_image"));
-		img_myPic.setImageURI(imgUri);
-
+		//img_myPic.setImageURI(imgUri);
 		ScaleImg(imgUri);
 
 		txt_myName = (TextView) findViewById(R.id.txt_myName);
@@ -125,6 +159,7 @@ public class MyProfileActivity extends Activity
 					public void onClick(DialogInterface dialog, int whichButton)
 					{
 						txt_myName.setText(inputEditText.getText());
+						sharedPreferences.edit().putString("myName", inputEditText.getText().toString()).commit();
 					}
 				}).setNegativeButton("Cancel", null).show();
 			}
@@ -165,6 +200,7 @@ public class MyProfileActivity extends Activity
 		txt_myMonthDistance.setText(sharedPreferences.getString("myMonthDistance", "0") + " km");
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data)
 	{
@@ -172,15 +208,23 @@ public class MyProfileActivity extends Activity
 
 		if (resultCode == RESULT_OK) // 有選擇檔案
 		{
-			Uri uri = data.getData(); // 取得檔案的 Uri
-			if (uri != null)
+			if (isFB)
 			{
-				img_myPic.setImageURI(uri); // 利用 Uri 顯示 ImageView 圖片
-				ScaleImg(uri);
-				sharedPreferences.edit().putString("ImgUri", uri.toString()).commit();
+				isFB = false;
+				facebook.authorizeCallback(requestCode, resultCode, data);
 			}
 			else
-				Toast.makeText(this, "無效的檔案路徑", Toast.LENGTH_LONG).show();
+			{
+				Uri uri = data.getData(); // 取得檔案的 Uri
+				if (uri != null)
+				{
+					//img_myPic.setImageURI(uri); // 利用 Uri 顯示 ImageView 圖片
+					ScaleImg(uri);
+					sharedPreferences.edit().putString("ImgUri", uri.toString()).commit();
+				}
+				else
+					Toast.makeText(this, "無效的檔案路徑", Toast.LENGTH_LONG).show();
+			}
 		}
 	}
 
@@ -229,14 +273,151 @@ public class MyProfileActivity extends Activity
 		}
 		catch (FileNotFoundException e)
 		{
-			// TODO 自動產生的 catch 區塊
 			e.printStackTrace();
 		}
 		catch (IOException e)
 		{
-			// TODO 自動產生的 catch 區塊
 			e.printStackTrace();
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private void FbLogin()
+	{
+		//Log.e("fbLogin", "0");
+		facebook.authorize(this, new String[] { "user_about_me" }, Facebook.FORCE_DIALOG_AUTH, new DialogListener()
+		{
+			@Override
+			public void onComplete(Bundle values)
+			{
+				try
+				{
+					String token = facebook.getAccessToken();
+					long token_expires = facebook.getAccessExpires();
+					String about_me = facebook.request("me"); //json string
+
+					JSONObject jb1 = new JSONObject(about_me);
+					String id = jb1.getString("id");
+					String name = jb1.getString("name");
+					String profile_picture = "https://graph.facebook.com/" + id + "/picture?type=large";
+					txt_myName.setText(name);
+					sharedPreferences.edit().putString("myName", name).commit();
+
+					Uri imgUri = GetFbPic(profile_picture, id);
+					ScaleImg(imgUri);
+
+					SharedPreferences.Editor editor = fbSpf.edit();
+					editor.putLong("access_expires", token_expires);
+					editor.putString("access_token", token);
+					editor.putString("fbid", id);
+					editor.putString("fbname", name);
+					if (fbSpf.getString("join", "").length() < 0)
+						editor.putString("join", "true");
+					editor.commit();
+					SetFb();
+
+					Toast.makeText(MyProfileActivity.this, name + "已登入Facebook", Toast.LENGTH_SHORT).show();
+				}
+				catch (MalformedURLException e)
+				{
+					Log.e("fbLogin1", "MalformedURLException:" + e);
+				}
+				catch (IOException e)
+				{
+					Log.e("fbLogin2", "IOException:" + e);
+				}
+				catch (JSONException e)
+				{
+					Log.e("fbLogin3", "JSONException:" + e);
+				}
+			}
+
+			@Override
+			public void onFacebookError(FacebookError e)
+			{
+				Log.e("fbLogin4", "FacebookError:" + e);
+			}
+
+			@Override
+			public void onError(DialogError e)
+			{
+				Log.e("fbLogin5", "DialogError:" + e);
+			}
+
+			@Override
+			public void onCancel()
+			{
+			}
+		});
+	}
+
+	@SuppressWarnings("deprecation")
+	public void SetFb()
+	{
+		fbSpf = getSharedPreferences("FaceBook", MODE_PRIVATE); //偏好設定 
+		final String access_token = fbSpf.getString("access_token", null);
+		final Long expires = fbSpf.getLong("access_expires", -1);
+
+		if (access_token != null && expires != -1)
+		{
+			facebook.setAccessToken(access_token);
+			facebook.setAccessExpires(expires);
+
+			String name = fbSpf.getString("fbname", "");
+			String id = fbSpf.getString("fbid", "");
+			String profile_picture = "https://graph.facebook.com/" + id + "/picture?type=square";
+			txt_myName.setText(name);
+			sharedPreferences.edit().putString("myName", name).commit();
+
+			Uri imgUri = GetFbPic(profile_picture, id);
+			//img_myPic.setImageURI(imgUri); // 利用 Uri 顯示 ImageView 圖片
+			ScaleImg(imgUri);
+
+		}
+
+		//					//logged
+		//					fb.edit().remove("access_expires").commit();
+		//					fb.edit().remove("access_token").commit();
+		//					fb.edit().remove("fbid").commit();
+		//					fb.edit().remove("fbname").commit();
+		//					Toast.makeText(SettingsActivity.this, "已登出Facebook", Toast.LENGTH_SHORT).show();
+		//					setFb();
+
+	}
+
+	public Uri GetFbPic(String profile_picture, String id)
+	{ //儲存FB User大頭照
+		Bitmap bitmap = null;
+		try
+		{
+			URL url = new URL(profile_picture);
+			URLConnection conn = url.openConnection();
+			conn.connect();
+			InputStream is = conn.getInputStream();
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			bitmap = BitmapFactory.decodeStream(is, null, options);
+
+			File folder = new File(Environment.getExternalStorageDirectory(), filefolderName);
+			if (!folder.exists())
+				folder.mkdir();
+			File file = new File(filePathRoot, id + ".png");
+			FileOutputStream fos = new FileOutputStream(file);
+			bitmap.compress(Bitmap.CompressFormat.PNG, 0, fos);
+
+			//Log.e("fbLogin", "" + filePathRoot + id + ".png");
+			sharedPreferences.edit().putString("ImgUri", filePathRoot + id + ".png").commit();
+			return Uri.parse(filePathRoot + id + ".png");
+		}
+		catch (MalformedURLException e)
+		{
+			Log.e("GetFbPic1", "MalformedURLException:" + e);
+		}
+		catch (IOException e)
+		{
+			Log.e("GetFbPic2", "IOException:" + e);
+		}
+
+		return null;
 	}
 
 	@Override
@@ -266,6 +447,14 @@ public class MyProfileActivity extends Activity
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	@SuppressWarnings("deprecation")
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		facebook.extendAccessTokenIfNeeded(this, null);
 	}
 
 }

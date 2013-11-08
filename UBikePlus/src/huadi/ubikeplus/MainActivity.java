@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import android.provider.Contacts;
 import android.provider.Settings;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -37,12 +36,9 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.AdapterView;
@@ -121,6 +117,7 @@ public class MainActivity extends Activity
 	private boolean isStartExe = false; //運動
 	private boolean isTimerStart = false; //計時開始
 	private AlertDialog exeDialog; //秀運動視窗
+	private boolean isMinimize = false; //最小化運動視窗
 	private Handler exeHandler = new Handler(); //檢查是否停止用
 
 	private ExerciseTimerView exerciseTimerView; //計時視窗
@@ -592,8 +589,10 @@ public class MainActivity extends Activity
 								isStartExe = true;
 								InitExercise();
 							}
-							//							InitExercise(); //TODO 測試
-							//							FinishExercise(); //測試
+							else if(isMinimize)
+							{
+								exeDialog.show();
+							}
 						}
 						break;
 					case 4: //設定
@@ -633,7 +632,15 @@ public class MainActivity extends Activity
 		linearLayout.addView(exerciseTimerView);
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setView(layout).setCancelable(false).setPositiveButton("OK", null);
+		builder.setView(layout).setCancelable(false).setPositiveButton("最小化", new DialogInterface.OnClickListener()
+		{			
+			@Override
+			public void onClick(DialogInterface dialog, int which)
+			{
+				// TODO 自動產生的方法 Stub			
+				isMinimize = true;
+			}
+		});
 
 		exeDialog = builder.create();
 		exeDialog.show();
