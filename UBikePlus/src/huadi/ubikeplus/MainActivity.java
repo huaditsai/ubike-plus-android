@@ -40,6 +40,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
@@ -47,8 +48,10 @@ import android.view.animation.RotateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.SearchView.OnQueryTextListener;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -141,8 +144,6 @@ public class MainActivity extends Activity
 		infoFile = new File(infoFilePath);
 
 		SetDrawer();
-
-		InitExercise();
 
 		SharedPreferences settings = getSharedPreferences("Preference", 0);
 
@@ -407,14 +408,7 @@ public class MainActivity extends Activity
 									{
 										startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
 									}
-								}).setNegativeButton("取消", new DialogInterface.OnClickListener()
-								{
-									@Override
-									public void onClick(DialogInterface dialog, int which)
-									{
-
-									}
-								}).show();
+								}).setNegativeButton("取消", null).show();
 							}
 						}
 						myLocationButton.setImageResource(R.drawable.map_location);
@@ -476,6 +470,7 @@ public class MainActivity extends Activity
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public void UpdateBike(boolean isAll, boolean isShowList) //更新站點資訊
 	{
 		InitMapItems(youBikeFile, true);
@@ -565,8 +560,7 @@ public class MainActivity extends Activity
 				switch (position)
 				{
 					case 0: //個人資訊
-						Intent intent = new Intent(MainActivity.this, MyProfileActivity.class);
-						startActivity(intent);
+						startActivity(new Intent(MainActivity.this, MyProfileActivity.class));
 						break;
 					case 1: //更新附近(1KM)
 						UpdateBike(false, true);
@@ -575,13 +569,27 @@ public class MainActivity extends Activity
 						UpdateBike(true, true);
 						break;
 					case 3: //運動計時
-						if (!isStartExe)
-							InitExercise();
-						FinishExercise();
+						SharedPreferences settings = getSharedPreferences("Preference", 0);
+						if (!settings.getBoolean("hasWeight", false))
+						{
+							new AlertDialog.Builder(MainActivity.this).setTitle("運動計時").setMessage("計算消耗熱量需要您的體重, 前往設定?").setPositiveButton("設定", new DialogInterface.OnClickListener()
+							{
+								@Override
+								public void onClick(DialogInterface dialog, int which)
+								{
+									startActivity(new Intent(MainActivity.this, MyProfileActivity.class));
+								}
+							}).setNegativeButton("取消", null).show();
+						}
+						else
+						{
+							if (!isStartExe)
+								InitExercise();
+							FinishExercise();
+						}
 						break;
 					case 4: //設定
-						Intent intent1 = new Intent(MainActivity.this, SettingActivity.class);
-						startActivity(intent1);
+						startActivity(new Intent(MainActivity.this, SettingActivity.class));
 						break;
 					default:
 						break;
@@ -609,33 +617,30 @@ public class MainActivity extends Activity
 		weight = settings.getFloat("myWeight", 60f); //體重(pb)
 
 		//TODO
-		ExerciseTimerView exerciseTimerView = new ExerciseTimerView(MainActivity.this);
+		exerciseTimerView = new ExerciseTimerView(MainActivity.this);
 		exerciseTimerView.Start();
 		//view1.SetTimeText("23");
 
-		AlertDialog.Builder builder;
-		AlertDialog alertDialog;
+		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		View layout = inflater.inflate(R.layout.exercise_start_view, null);
+		LinearLayout linearLayout = (LinearLayout) layout.findViewById(R.id.lilayout_exercise_start);
+		linearLayout.addView(exerciseTimerView);
 
-		builder = new AlertDialog.Builder(MainActivity.this);
-		builder.setView(exerciseTimerView).setCancelable(false).setPositiveButton("OK", null);
-		alertDialog = builder.create();
-		alertDialog.show();
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setView(layout).setCancelable(false).setPositiveButton("OK", null);
 
-		//alertDialog.getWindow().setContentView(R.layout.activity_myinfo);
+		AlertDialog dialog = builder.create();
+		dialog.show();
 
 		DisplayMetrics dm = new DisplayMetrics(); // 建立一個DisplayMetrics物件
 		getWindowManager().getDefaultDisplay().getMetrics(dm); // 取得裝置的資訊
 		int Width = dm.widthPixels;
 		int Height = dm.heightPixels;
 
-		WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-		Window window = alertDialog.getWindow();
-		lp = window.getAttributes();
-
+		LayoutParams lp = (LayoutParams) linearLayout.getLayoutParams();
 		lp.width = (int) (Width * 0.8);
 		lp.height = (int) (Width * 0.9);
-		lp.alpha = 0.9f;
-		window.setAttributes(lp);
+		linearLayout.setLayoutParams(lp);
 	}
 
 	public void DoExercise() //於locationChange
@@ -689,9 +694,20 @@ public class MainActivity extends Activity
 
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		View layout = inflater.inflate(R.layout.exercise_finish_view, null);
-		
+
+		TextView txt_exercise_distance = (TextView) layout.findViewById(R.id.txt_exercise_distance);
+		TextView txt_exercise_time = (TextView) layout.findViewById(R.id.txt_exercise_time);
+		TextView txt_exercise_speed = (TextView) layout.findViewById(R.id.txt_exercise_speed);
+		TextView txt_exercise_caloric = (TextView) layout.findViewById(R.id.txt_exercise_caloric);
+
+		txt_exercise_distance.setText(myTracesDistance + " Km");
+		txt_exercise_time.setText(String.format("%02d:%02d:%02d", (int) exerciseTimerView.GetTotalTimeSecond() / 3600, (int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60, (int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
+		txt_exercise_speed.setText(String.format("%02.2f km/hr", (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 3.6f));
+		txt_exercise_caloric.setText(caloric + " caloric");
+
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setView(layout);
+		builder.setView(layout).setCancelable(false).setPositiveButton("OK", null);
+
 		AlertDialog dialog = builder.create();
 		dialog.show();
 	}

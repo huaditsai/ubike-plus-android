@@ -63,7 +63,7 @@ public class MyProfileActivity extends Activity
 			{
 				AlertDialog.Builder builderSingle = new AlertDialog.Builder(MyProfileActivity.this);
 				//builderSingle.setIcon(R.drawable.ic_launcher);
-				//builderSingle.setTitle("Select One Name:-");
+				builderSingle.setTitle("選擇圖片");
 
 				final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(MyProfileActivity.this, android.R.layout.select_dialog_item);
 				//arrayAdapter.add("拍照");
@@ -98,19 +98,6 @@ public class MyProfileActivity extends Activity
 							default:
 								break;
 						}
-						//						String strName = arrayAdapter.getItem(position);
-						//						AlertDialog.Builder builderInner = new AlertDialog.Builder(MyInfoActivity.this);						
-						//						builderInner.setTitle("Your Selected Item is");
-						//						builderInner.setMessage(strName);
-						//						builderInner.setPositiveButton("Ok", new DialogInterface.OnClickListener()
-						//						{
-						//							@Override
-						//							public void onClick(DialogInterface dialog, int which)
-						//							{
-						//								dialog.dismiss();
-						//							}
-						//						});
-						//						builderInner.show();
 					}
 				});
 				builderSingle.show();
@@ -131,32 +118,42 @@ public class MyProfileActivity extends Activity
 			{
 				final EditText inputEditText = new EditText(MyProfileActivity.this);
 				inputEditText.setSingleLine();
-				
-				new AlertDialog.Builder(MyProfileActivity.this)
-				.setTitle("輸入名稱")
-				.setView(inputEditText)
-				.setPositiveButton("Ok", new DialogInterface.OnClickListener()
+
+				new AlertDialog.Builder(MyProfileActivity.this).setTitle("輸入名稱").setView(inputEditText).setPositiveButton("Ok", new DialogInterface.OnClickListener()
 				{
 					public void onClick(DialogInterface dialog, int whichButton)
 					{
 						txt_myName.setText(inputEditText.getText());
 					}
-				})
-				.setNegativeButton("Cancel", new DialogInterface.OnClickListener()
-				{
-					public void onClick(DialogInterface dialog, int whichButton)
-					{
-						// Canceled.
-					}
-				}).show();
+				}).setNegativeButton("Cancel", null).show();
 			}
 		});
 
-		txt_myHeight = (TextView) findViewById(R.id.txt_myHeight);
-		txt_myHeight.setText(sharedPreferences.getString("myHeight", "190") + " cm");
-
 		txt_myWeight = (TextView) findViewById(R.id.txt_myWeight);
-		txt_myWeight.setText(sharedPreferences.getString("myWeight", "60") + " kg");
+		if (!sharedPreferences.getBoolean("hasWeight", false))
+		{			
+			txt_myWeight.setOnClickListener(new OnClickListener()
+			{
+				@Override
+				public void onClick(View v)
+				{
+					final EditText inputEditText = new EditText(MyProfileActivity.this);
+					inputEditText.setSingleLine();
+
+					new AlertDialog.Builder(MyProfileActivity.this).setTitle("請輸入體重 (公斤)").setView(inputEditText).setPositiveButton("Ok", new DialogInterface.OnClickListener()
+					{
+						public void onClick(DialogInterface dialog, int whichButton)
+						{
+							txt_myWeight.setText(inputEditText.getText());
+							sharedPreferences.edit().putString("myWeight", inputEditText.getText().toString()).commit();
+							sharedPreferences.edit().putBoolean("hasWeight", true);
+						}
+					}).setNegativeButton("Cancel", null).show();
+				}
+			});
+		}
+		else
+			txt_myWeight.setText(sharedPreferences.getString("myWeight", "60") + " kg");
 
 		txt_myTotalDistance = (TextView) findViewById(R.id.txt_myTotalDistance);
 		txt_myTotalDistance.setText(sharedPreferences.getString("myTotalDistance", "0") + " km");
@@ -212,22 +209,22 @@ public class MyProfileActivity extends Activity
 			Matrix matrix = new Matrix();
 			matrix.postScale(scale, scale);
 			Bitmap newbm = Bitmap.createBitmap(bmp, 0, 0, width, height, matrix, true);
-			
+
 			//畫圓形
-		    Bitmap output = Bitmap.createBitmap(newbm.getWidth(), newbm.getHeight(), Config.ARGB_8888);
-		    Canvas canvas = new Canvas(output);
+			Bitmap output = Bitmap.createBitmap(newbm.getWidth(), newbm.getHeight(), Config.ARGB_8888);
+			Canvas canvas = new Canvas(output);
 
-		    final int color = 0xff424242;
-		    final Paint paint = new Paint();
-		    final Rect rect = new Rect(0, 0, newbm.getWidth(), newbm.getHeight());
+			final int color = 0xff424242;
+			final Paint paint = new Paint();
+			final Rect rect = new Rect(0, 0, newbm.getWidth(), newbm.getHeight());
 
-		    paint.setAntiAlias(true);
-		    canvas.drawARGB(0, 0, 0, 0);
-		    paint.setColor(color);
-		    canvas.drawCircle(newbm.getWidth() / 2, newbm.getHeight() / 2, newbm.getWidth() / 2, paint);
-		    paint.setXfermode(new PorterDuffXfermode(Mode.SRC_IN));
-		    canvas.drawBitmap(newbm, rect, rect, paint);
-		    
+			paint.setAntiAlias(true);
+			canvas.drawARGB(0, 0, 0, 0);
+			paint.setColor(color);
+			canvas.drawCircle(newbm.getWidth() / 2, newbm.getHeight() / 2, newbm.getWidth() / 2, paint);
+			paint.setXfermode(new PorterDuffXfermode(Mode.SRC_IN));
+			canvas.drawBitmap(newbm, rect, rect, paint);
+
 			img_myPic.setImageBitmap(output);
 		}
 		catch (FileNotFoundException e)

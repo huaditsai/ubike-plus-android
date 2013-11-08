@@ -9,9 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
+import java.util.Calendar;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
@@ -142,13 +140,16 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 			dialog.dismiss();
 		
 		SharedPreferences settings = context.getSharedPreferences("Preference", 0);
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-		int currentDateTime = Integer.parseInt(sdf.format(new Date()));
+		Calendar calendar = Calendar.getInstance();
+		int year = calendar.get(Calendar.YEAR); //民國
+		int month = calendar.get(Calendar.MONTH) + 1; //Calendar.MONTH 從0開始...
+		int day = calendar.get(Calendar.DATE);
+		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
 		settings.edit().putInt("UpdateTime", currentDateTime); //紀錄更新日期
 		
 		if (result != null)
 		{
-			Toast.makeText(context, "下載失敗 ", Toast.LENGTH_LONG).show();
+			Toast.makeText(context, "租車站點資料下載失敗 ", Toast.LENGTH_LONG).show();
 			if(isAddPoint)
 				settings.edit().putInt("UpdateTime", 0);
 		}
@@ -160,7 +161,7 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 			{
 				String filePath = rootPath + fileName;
 				final File file = new File(filePath);
-				FileReader fr = new FileReader(file);						
+				final FileReader fr = new FileReader(file);						
 				final BufferedReader br = new BufferedReader(fr);
 				
 				final Handler handler = new Handler();
@@ -184,7 +185,11 @@ public class DownloadTask extends AsyncTask<String, Integer, String>
 								}
 							}
 							else
+							{
 								handler.removeCallbacks(runnable);
+//								fr.close();
+//								br.close();
+							}
 						}
 						catch (Exception e)
 						{

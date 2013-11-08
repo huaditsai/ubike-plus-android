@@ -100,9 +100,9 @@ public class ExerciseTimerView extends View
 		speedString = text;
 	}
 
-	public int GetTotalTimeSecond()
+	public float GetTotalTimeSecond()
 	{
-		return timePercentSecond * 100;
+		return timePercentSecond / 100f;
 	}
 
 	private void DrawTimer(Canvas canvas) //­p®É¾¹
