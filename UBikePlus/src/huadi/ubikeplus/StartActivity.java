@@ -18,7 +18,7 @@ public class StartActivity extends Activity
 		setContentView(R.layout.activity_start);
 
 		handler.removeCallbacks(updateTimer);
-		handler.postDelayed(updateTimer, 1000); // 3sec		
+		handler.postDelayed(updateTimer, 1000); // 3sec
 	}
 
 	private Runnable updateTimer = new Runnable()

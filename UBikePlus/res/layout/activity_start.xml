@@ -1,14 +1,11 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content" >
-
-    <ImageView
-        android:id="@+id/imageView1"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:scaleType="center"
-        android:src="@drawable/icon" />
-
-</RelativeLayout>
+    android:layout_height="wrap_content"
+    android:layout_centerInParent="true"
+    android:layout_gravity="center_vertical|center_horizontal"
+    android:drawablePadding="20dp"
+    android:drawableTop="@drawable/icon512"
+    android:gravity="center_vertical|center_horizontal"
+    android:text="UBike+"
+    android:textColor="#ff99ae19"
+    android:textSize="50sp" />
