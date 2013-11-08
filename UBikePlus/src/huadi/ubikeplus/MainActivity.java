@@ -699,7 +699,7 @@ public class MainActivity extends Activity
 		TextView txt_exercise_time = (TextView) layout.findViewById(R.id.txt_exercise_time);
 		TextView txt_exercise_speed = (TextView) layout.findViewById(R.id.txt_exercise_speed);
 		TextView txt_exercise_caloric = (TextView) layout.findViewById(R.id.txt_exercise_caloric);
-
+		
 		txt_exercise_distance.setText(myTracesDistance + " Km");
 		txt_exercise_time.setText(String.format("%02d:%02d:%02d", (int) exerciseTimerView.GetTotalTimeSecond() / 3600, (int) exerciseTimerView.GetTotalTimeSecond() / 60 % 60, (int) exerciseTimerView.GetTotalTimeSecond() % 60 % 60));
 		txt_exercise_speed.setText(String.format("%02.2f km/hr", (myTracesDistance / exerciseTimerView.GetTotalTimeSecond()) * 3.6f));
