@@ -14,8 +14,8 @@ import org.json.JSONObject;
 
 import com.facebook.android.DialogError;
 import com.facebook.android.Facebook;
-import com.facebook.android.Facebook.DialogListener;
 import com.facebook.android.FacebookError;
+import com.facebook.android.Facebook.DialogListener;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -37,7 +37,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
-import android.provider.MediaStore.Images;
 import android.support.v4.app.NavUtils;
 import android.text.InputType;
 import android.util.DisplayMetrics;
@@ -76,18 +75,16 @@ public class MyProfileActivity extends Activity
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_myprofile);
-        
-	    StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectDiskReads()
-	    		.detectDiskWrites().detectNetwork().penaltyLog().build());
-	    StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectLeakedSqlLiteObjects()
-	    		.detectLeakedClosableObjects().penaltyLog().penaltyDeath().build());
-	    
+
+		StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build());
+		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectLeakedSqlLiteObjects().detectLeakedClosableObjects().penaltyLog().penaltyDeath().build());
+
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 		getActionBar().setBackgroundDrawable(getResources().getDrawable(R.drawable.actionbar_bg));
 
 		fbSpf = getSharedPreferences("FaceBook", MODE_PRIVATE); //偏好設定 
 		facebook = new Facebook(fbSpf.getString("fbAppID", getResources().getString(R.string.app_id)));
-		
+
 		filefolderName = "UBikePlus";
 		filePathRoot = Environment.getExternalStorageDirectory() + "/" + filefolderName + "/";
 
@@ -290,8 +287,9 @@ public class MyProfileActivity extends Activity
 	private void FbLogin()
 	{
 		//Log.e("fbLogin", "0");
-		facebook.authorize(this, new String[] { "user_about_me","publish_stream", "read_stream","user_photos" }, Facebook.FORCE_DIALOG_AUTH, new DialogListener()
+		facebook.authorize(this, new String[] { "user_about_me", "publish_stream", "read_stream", "user_photos" }, Facebook.FORCE_DIALOG_AUTH, new DialogListener()
 		{
+			@Override
 			public void onComplete(Bundle values)
 			{
 				try
@@ -319,7 +317,7 @@ public class MyProfileActivity extends Activity
 						editor.putString("join", "true");
 					editor.commit();
 					setFb();
-					
+
 					Toast.makeText(MyProfileActivity.this, name + "已登入Facebook", Toast.LENGTH_SHORT).show();
 				}
 				catch (MalformedURLException e)
@@ -336,16 +334,19 @@ public class MyProfileActivity extends Activity
 				}
 			}
 
+			@Override
 			public void onFacebookError(FacebookError e)
 			{
 				Log.e("fbLogin4", "FacebookError:" + e);
 			}
 
+			@Override
 			public void onError(DialogError e)
 			{
 				Log.e("fbLogin5", "DialogError:" + e);
 			}
 
+			@Override
 			public void onCancel()
 			{
 			}

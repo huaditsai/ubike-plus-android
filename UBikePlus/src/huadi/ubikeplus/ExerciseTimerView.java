@@ -29,7 +29,7 @@ public class ExerciseTimerView extends View
 	private Handler timeHandler = new Handler();
 	private int timePercentSecond = 0;
 	private int alarmPercentSecond = 30 * 60 * 100; //30╓юда
-	private int stopPercentSecond = 3 * 100; //3╛М
+	private int stopPercentSecond = 10;
 
 	private String speedString = "";
 
