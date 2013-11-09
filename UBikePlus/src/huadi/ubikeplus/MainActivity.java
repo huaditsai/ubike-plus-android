@@ -17,9 +17,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.List;
 
 import org.json.JSONException;
@@ -27,17 +25,12 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -50,7 +43,6 @@ import android.provider.Settings;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -68,26 +60,15 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
-import android.widget.TextView;
 import android.widget.SearchView.OnQueryTextListener;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.facebook.FacebookException;
-import com.facebook.FacebookOperationCanceledException;
-import com.facebook.FacebookRequestError;
-import com.facebook.HttpMethod;
-import com.facebook.Request;
-import com.facebook.RequestAsyncTask;
-import com.facebook.Response;
-import com.facebook.Session;
 import com.facebook.android.AsyncFacebookRunner;
-import com.facebook.android.AsyncFacebookRunner.RequestListener;
 import com.facebook.android.DialogError;
 import com.facebook.android.Facebook;
 import com.facebook.android.Facebook.DialogListener;
 import com.facebook.android.FacebookError;
-import com.facebook.widget.WebDialog;
-import com.facebook.widget.WebDialog.OnCompleteListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
@@ -110,6 +91,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+@SuppressWarnings("deprecation")
 public class MainActivity extends Activity
 {
 	Facebook facebook;
@@ -331,7 +313,6 @@ public class MainActivity extends Activity
 				String line = br.readLine();
 				while (line != null)
 				{
-
 					Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));// 0代號 3名稱 4位置 5區 6英區
 																																																																										// 7 英位址
 
@@ -359,12 +340,6 @@ public class MainActivity extends Activity
 								// Log.e("br.readLine()", line);
 
 								Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(line.split(",")[1]), Double.parseDouble(line.split(",")[2]))).icon(BitmapDescriptorFactory.fromResource(R.drawable.map_havebike)).title(line.split(",")[3]).snippet(line.split(",")[4]));// 0代號
-																																																																													// 3名稱
-																																																																													// 4位置
-																																																																													// 5區
-																																																																													// 6英區
-																																																																													// 7
-																																																																													// 英位址
 
 								allMarkers.add(marker); // 新增到所有點中
 							}
@@ -845,44 +820,7 @@ public class MainActivity extends Activity
 		}
 		else
 		{
-			//			CaptureMapScreen();
-			//			//TODO 把圖抓進來
-			//			try
-			//			{
-			//				bmpSnapshot = MediaStore.Images.Media.getBitmap(this.getContentResolver(), Uri.parse(Environment.getExternalStorageDirectory() + "/UBikePlus/ttt.png"));
-			//			}
-			//			catch (FileNotFoundException e1)
-			//			{
-			//				e1.printStackTrace();
-			//			}
-			//			catch (IOException e1)
-			//			{
-			//				e1.printStackTrace();
-			//			}
-			bmpSnapshot = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
-
-			ByteArrayOutputStream stream = new ByteArrayOutputStream();
-			bmpSnapshot.compress(Bitmap.CompressFormat.PNG, 100, stream);
-			byte[] bitmapdata = stream.toByteArray();
-
-			Bundle params = new Bundle();
-			try
-			{
-				float aveSpeed = myTracesDistance / (exerciseTimerView.GetTotalTimeSecond() / 3600f); // km/hr
-				if (myTracesDistance <= 0 || exerciseTimerView.GetTotalTimeSecond() <= 0)
-					aveSpeed = 0;
-
-				params.putString("method", "photos.upload");
-				params.putByteArray("picture", bitmapdata);
-				params.putString("caption", String.format("今天以平均時速 %.1f km/hr, 騎了 %.2f 公里的 YouBike, 總共消耗 %.0f 卡路里的熱量", aveSpeed, myTracesDistance, caloric));
-			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
-
-			AsyncFacebookRunner mAsyncRunner = new AsyncFacebookRunner(facebook);
-			mAsyncRunner.request(null, params, "POST", new SampleUploadListener(), null);
+			CaptureMapScreen();
 		}
 	}
 
@@ -980,6 +918,7 @@ public class MainActivity extends Activity
 		});
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data)
 	{
@@ -1008,16 +947,47 @@ public class MainActivity extends Activity
 	public void CaptureMapScreen()
 	{
 		//TODO 沒截到
+		final ImageView snapshotHolder = new ImageView(getBaseContext());
+		snapshotHolder.setImageResource(R.drawable.ic_launcher);
+
 		SnapshotReadyCallback callback = new SnapshotReadyCallback()
 		{
 			@Override
 			public void onSnapshotReady(Bitmap snapshot)
 			{
+				snapshotHolder.setImageBitmap(snapshot);
 				bmpSnapshot = snapshot;
 				try
 				{
-					FileOutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory() + "/UBikePlus/ttt.png");
-					bmpSnapshot.compress(Bitmap.CompressFormat.PNG, 100, out);
+					//					FileOutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory() + "/UBikePlus/ttt.png");
+					//					bmpSnapshot.compress(Bitmap.CompressFormat.PNG, 100, out);
+					//					out.close();
+
+					ByteArrayOutputStream stream = new ByteArrayOutputStream();
+					bmpSnapshot.compress(Bitmap.CompressFormat.PNG, 100, stream);
+					byte[] bitmapdata = stream.toByteArray();
+					stream.close();
+
+					Bundle params = new Bundle();
+					try
+					{
+						float aveSpeed = myTracesDistance / (exerciseTimerView.GetTotalTimeSecond() / 3600f); // km/hr
+						if (myTracesDistance <= 0 || exerciseTimerView.GetTotalTimeSecond() <= 0)
+							aveSpeed = 0;
+
+						params.putString("method", "photos.upload");
+						params.putByteArray("picture", bitmapdata);
+						params.putString("caption", String.format("今天以平均時速 %.1f km/hr, 騎了 %.2f 公里的 YouBike, 總共消耗 %.0f 卡路里的熱量", aveSpeed, myTracesDistance, caloric));
+					}
+					catch (Exception e)
+					{
+						e.printStackTrace();
+					}
+
+					AsyncFacebookRunner mAsyncRunner = new AsyncFacebookRunner(facebook);
+					mAsyncRunner.request(null, params, "POST", new SampleUploadListener(), null);
+
+					Toast.makeText(getBaseContext(), "Post Success", Toast.LENGTH_LONG).show();
 				}
 				catch (Exception e)
 				{
