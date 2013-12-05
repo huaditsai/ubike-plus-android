@@ -40,24 +40,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:id="@+id/myinfo_parking_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawableLeft="@drawable/myinfo_parking"
-                android:drawablePadding="5dp"
-                android:paddingRight="5dp"
-                android:text=""
-                android:textColor="#ff7f7f7f" />
-
+            android:orientation="horizontal" >            
 
             <TextView
                 android:id="@+id/myinfo_bike_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableLeft="@drawable/myinfo_bike"
+                android:drawablePadding="5dp"
+                android:paddingRight="5dp"
+                android:text=""
+                android:textColor="#ff7f7f7f" />
+            
+            <TextView
+                android:id="@+id/myinfo_parking_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/myinfo_parking"
                 android:drawablePadding="5dp"
                 android:paddingRight="5dp"
                 android:text=""
