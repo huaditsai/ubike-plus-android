@@ -491,8 +491,8 @@ containing a value of this type.
         public static final int left_drawer=0x7f07000d;
         public static final int lilayout_exercise_start=0x7f070041;
         public static final int map=0x7f070008;
-        public static final int myinfo_bike_text=0x7f07003b;
-        public static final int myinfo_parking_text=0x7f07003a;
+        public static final int myinfo_bike_text=0x7f07003a;
+        public static final int myinfo_parking_text=0x7f07003b;
         public static final int mylistview=0x7f070021;
         public static final int none=0x7f070000;
         public static final int normal=0x7f070001;
