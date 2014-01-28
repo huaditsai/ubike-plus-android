@@ -125,7 +125,7 @@ public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<Stri
 				Matcher m = p.matcher(result);
 				while (m.find())
 				{
-					info.add(m.group(1) + "," + m.group(2));
+					info.add(m.group(1) + "," + m.group(2)); //¨®½ø, ¨®¦ì
 				}
 			}
 			catch (Exception e)

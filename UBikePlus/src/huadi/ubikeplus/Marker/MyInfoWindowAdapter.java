@@ -97,13 +97,13 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 				if (snippet.split(",")[0].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), bikeHeadString.length(), bikeHeadString.length() + snippet.split(",")[0].length(), 0);
-					myinfo_parking_text.setTextColor(Color.RED);
+					myinfo_bike_text.setTextColor(Color.RED);
 					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nobike));
 				}
 				else if (snippet.split(",")[1].equals("0"))
 				{
 					snippetText.setSpan(new ForegroundColorSpan(Color.RED), stopHeadString.length(), snippetText.length(), 0);
-					myinfo_bike_text.setTextColor(Color.RED);
+					myinfo_parking_text.setTextColor(Color.RED);
 					marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.map_nopark));
 				}
 				else if(snippet.split(",")[1].equals("null") && snippet.split(",")[1].equals("null"))
@@ -111,8 +111,8 @@ public class MyInfoWindowAdapter implements InfoWindowAdapter
 
 //				info_snippet.setText(snippetText);
 				info_snippet.setText(sarea);
-				myinfo_parking_text.setText(snippet.split(",")[0]);
-				myinfo_bike_text.setText(snippet.split(",")[1]);
+				myinfo_bike_text.setText(snippet.split(",")[0]);
+				myinfo_parking_text.setText(snippet.split(",")[1]);
 			}
 			else
 			{
