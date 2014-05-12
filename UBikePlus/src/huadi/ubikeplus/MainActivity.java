@@ -172,18 +172,19 @@ public class MainActivity extends Activity
 
 		SetDrawer();
 
-		SharedPreferences settings = getSharedPreferences("Preference", 0);
-
-		Calendar calendar = Calendar.getInstance();
-		int year = calendar.get(Calendar.YEAR); // 民國
-		int month = calendar.get(Calendar.MONTH) + 1; // Calendar.MONTH 從0開始...
-		int day = calendar.get(Calendar.DATE);
-		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
-		// Log.e("123", "" + currentDateTime);
-		if (settings.getInt("UpdateTime", 0) < currentDateTime) // 該更新了
-			isUpdateBikeTxt = true;
-		else
-			isUpdateBikeTxt = false;
+//更新站店位置
+//		SharedPreferences settings = getSharedPreferences("Preference", 0);
+//
+//		Calendar calendar = Calendar.getInstance();
+//		int year = calendar.get(Calendar.YEAR); // 民國
+//		int month = calendar.get(Calendar.MONTH) + 1; // Calendar.MONTH 從0開始...
+//		int day = calendar.get(Calendar.DATE);
+//		int currentDateTime = Integer.parseInt(String.format("%d%02d%02d", year, month, day));
+//		// Log.e("123", "" + currentDateTime);
+//		if (settings.getInt("UpdateTime", 0) < currentDateTime) // 該更新了
+//			isUpdateBikeTxt = true;
+//		else
+//			isUpdateBikeTxt = false;
 
 	}
 

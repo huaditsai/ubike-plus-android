@@ -2,11 +2,11 @@ package huadi.ubikeplus.Marker;
 
 import huadi.ubikeplus.BikeList;
 import huadi.ubikeplus.BikeListAdapter;
-import huadi.ubikeplus.MainActivity;
 import huadi.ubikeplus.R;
 import huadi.ubikeplus.Route.GoogleDistanceMatrixTask;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -17,9 +17,18 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.Polyline;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -35,8 +44,12 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ListView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ListView;
+
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polyline;
 
 public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<String>> // <肚把计, 矪瞶い穝ざ把计, 矪瞶肚把计>
 {
@@ -91,54 +104,130 @@ public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<Stri
 	protected List<String> doInBackground(List<String>... params)
 	{
 		sareas = params[1];
-		//		if (params.length < 0)
-		//			return null;
-		for (int i = 0; i < params[0].size(); i++)
+		if (params.length < 0)
+			return null;
+
+		HttpURLConnection con = null;
+		try
 		{
-			sno = params[0].get(i);
-			sarea = params[1].get(i);
+			//URL url = new URL("http://www.youbike.com.tw/info3b.php?sno=" + sno); // String.format("%04d",)); //呼э舘
+			URL url = new URL("http://210.69.61.60:8080/you/gwjs_cityhall.json");
+			con = (HttpURLConnection) url.openConnection();
+			con.setReadTimeout(10000);
+			con.setConnectTimeout(15000);
+			con.setRequestMethod("GET");
+			con.addRequestProperty("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.2; en-GB; rv:1.9.2.9) Gecko/20100824 Firefox/3.6.9");
+			con.setDoInput(true);
+			con.connect();
 
-			HttpURLConnection con = null;
-			try
+			BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
+
+			String n, result = "";
+			StringBuilder htmlContent = new StringBuilder();
+			while ((n = reader.readLine()) != null)
+				htmlContent.append(n);
+
+			result = htmlContent.toString();
+
+			JSONObject jsonObject = new JSONObject(result); //{}JSONObject
+			JSONArray retValArray = jsonObject.getJSONArray("retVal"); //[]JSONArray
+
+			for (int i = 0; i < params[0].size(); i++)
 			{
-				URL url = new URL("http://www.youbike.com.tw/info3b.php?sno=" + sno); // String.format("%04d",));
-				con = (HttpURLConnection) url.openConnection();
-				con.setReadTimeout(10000);
-				con.setConnectTimeout(15000);
-				con.setRequestMethod("GET");
-				con.addRequestProperty("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.2; en-GB; rv:1.9.2.9) Gecko/20100824 Firefox/3.6.9");
-				con.setDoInput(true);
-				con.connect();
-
-				BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
-
-				String n, result = "";
-				StringBuilder htmlContent = new StringBuilder();
-				while ((n = reader.readLine()) != null)
-					htmlContent.append(n);
-
-				result = htmlContent.toString();
-
-				String pattern;
-				pattern = "sbi\\s*\\=\\s*'([0-9]+)?'.*sus\\s*\\=\\s*'([0-9]+)?';";
-				Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
-				Matcher m = p.matcher(result);
-				while (m.find())
+				sno = params[0].get(i);
+				sarea = params[1].get(i);
+				Log.e("sno", sno);
+				for (int j = 0; j < retValArray.length(); j++)
 				{
-					info.add(m.group(1) + "," + m.group(2)); //ó进, ó
+					if (sno.equals(retValArray.getJSONObject(j).getString("sno")))
+					{
+						String sbiString = retValArray.getJSONObject(j).getString("sbi");
+						String totString = retValArray.getJSONObject(j).getString("tot");
+						try
+						{
+							int sus = Integer.parseInt(totString) - Integer.parseInt(sbiString);
+							info.add(sbiString + "," + sus);//ó进, ó
+						}
+						catch (NumberFormatException e)
+						{
+							Log.e("Exception", e.toString());
+							info.add("0,0");
+						}
+					}
 				}
 			}
-			catch (Exception e)
-			{
-				Log.e("Exception", e.toString());
-				info.add("代刚┪蝴い...");
-			}
-			finally
-			{
-				if (con != null)
-					con.disconnect();
-			}
 		}
+		catch (Exception e)
+		{
+			Log.e("Exception", e.toString());
+		}
+		finally
+		{
+			if (con != null)
+				con.disconnect();
+		}
+
+//		HttpGet get = new HttpGet("http://210.69.61.60:8080/you/gwjs_cityhall.json");
+//		HttpParams httpParameters = new BasicHttpParams();
+//		HttpConnectionParams.setConnectionTimeout(httpParameters, 3000);
+//		HttpClient httpClient = new DefaultHttpClient(httpParameters);
+//
+//		try
+//		{
+//			HttpResponse httpResponse = null;
+//			httpResponse = httpClient.execute(get);
+//			String strResult = "";
+//
+//			if (httpResponse.getStatusLine().getStatusCode() == 200)//耞呼隔硈钡琌Θ
+//			{
+//				strResult = EntityUtils.toString(httpResponse.getEntity()); //ъㄓ戈
+//
+//				try
+//				{
+//					JSONObject jsonObject = new JSONObject(strResult); //{}JSONObject
+//					JSONArray retValArray = jsonObject.getJSONArray("retVal"); //[]JSONArray
+//
+//					for (int j = 0; j < params[0].size(); j++)
+//					{
+//						sno = params[0].get(j);
+//						sarea = params[1].get(j);
+//						//Log.e("sno", sno);
+//						for (int i = 0; i < retValArray.length(); i++)
+//						{
+//							if (sno.equals(retValArray.getJSONObject(i).getString("sno")))
+//							{
+//								String sbiString = retValArray.getJSONObject(i).getString("sbi");
+//								String totString = retValArray.getJSONObject(i).getString("tot");
+//								try
+//								{
+//									int sus = Integer.parseInt(totString) - Integer.parseInt(sbiString);
+//									info.add(sbiString + "," + sus);//ó进, ó
+//								}
+//								catch (NumberFormatException e)
+//								{
+//									Log.e("Exception", e.toString());
+//									info.add("0,0");
+//								}
+//							}
+//
+//						}
+//					}
+//				}
+//				catch (JSONException e)
+//				{
+//					info.add("代刚┪蝴い...");
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//		catch (ClientProtocolException e)
+//		{
+//			e.printStackTrace();
+//		}
+//		catch (IOException e)
+//		{
+//			e.printStackTrace();
+//		}
 
 		return info;
 	}
