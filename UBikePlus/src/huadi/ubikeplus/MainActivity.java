@@ -597,10 +597,10 @@ public class MainActivity extends Activity
 					case 1: // 更新附近(1KM)
 						UpdateBike(false, true);
 						break;
-					case 2: // 更新全部
-						UpdateBike(true, true);
-						break;
-					case 3: // 運動計時
+//					case 2: // 更新全部
+//						UpdateBike(true, true);
+//						break;
+					case 2: // 運動計時
 						SharedPreferences settings = getSharedPreferences("Preference", 0);
 						if (!settings.getBoolean("hasWeight", false))
 						{
@@ -626,7 +626,7 @@ public class MainActivity extends Activity
 							}
 						}
 						break;
-					case 4: // 設定
+					case 3: // 設定
 						startActivity(new Intent(MainActivity.this, SettingActivity.class));
 						break;
 					default:
