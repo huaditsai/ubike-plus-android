@@ -6,7 +6,6 @@ import huadi.ubikeplus.R;
 import huadi.ubikeplus.Route.GoogleDistanceMatrixTask;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -14,20 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.app.Activity;
@@ -111,7 +97,7 @@ public class RealTimeBikeTask extends AsyncTask<List<String>, Integer, List<Stri
 		try
 		{
 			//URL url = new URL("http://www.youbike.com.tw/info3b.php?sno=" + sno); // String.format("%04d",)); //ºô¯¸§ïª©Åo
-			URL url = new URL("http://210.69.61.60:8080/you/gwjs_cityhall.json");
+			URL url = new URL("http://opendata.dot.taipei.gov.tw/opendata/gwjs_cityhall.json");
 			con = (HttpURLConnection) url.openConnection();
 			con.setReadTimeout(10000);
 			con.setConnectTimeout(15000);
