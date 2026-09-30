@@ -35,6 +35,17 @@ The preserved page comes from a document published by National Taipei University
 - Cleaned before publication: the Google Maps API key is replaced with `YOUR_GOOGLE_MAPS_API_KEY`, compiled build output (`bin/`) is removed from every commit, and a teammate's email address is replaced with a placeholder. Names are kept.
 - Earlier app by the same team: https://github.com/huaditsai/freebike-android
 
+## Design files
+
+`design/` holds the team's original artwork from October 2013 to May 2014, added in September 2026 from a local archive:
+
+- The app icon in several versions (`Bike.psd`, `icon.psd`, `icon2.psd`, `icon2.png`, the 512 px `icon512.png`) and the navigation drawer icon `drawer_icon.png`.
+- Map markers that show station status (`bike_pin*.psd`, `bike_pin_g.png`, `bike_pin_o.png`, `bike_pin_r.png`), the marker info bubble `custom_info_bubble.9.png`, and small bike, dock and arrow icons.
+- Ride timer buttons and gauges: `exercise_*`, `Speed.psd` and `calories.psd`.
+- `構想.png` and `構想.psd`: the hand-drawn screen-flow concept.
+
+<img src="design/icon512.png" width="160" alt="UBike+ app icon"> <img src="design/構想.png" width="320" alt="UBike+ hand-drawn screen-flow concept">
+
 ## License
 
 No open-source license was found. Do not assume the repository grants any license; third-party libraries keep their own licenses.
